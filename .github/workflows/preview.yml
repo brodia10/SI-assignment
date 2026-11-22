@@ -1,0 +1,42 @@
+# Every PR gets its own Firebase Hosting preview channel; the action comments the URL on the PR.
+# Previews call the production API (CORS allows si-assignment--*.web.app), so they see real data.
+name: Preview
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write # to comment the preview URL
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Web → preview channel
+    # PRs from forks don't get repo secrets, so they can't deploy a preview.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -C web build
+
+      - uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0.11.0 (third-party, gets the deploy key: pinned to a commit)
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SI_ASSIGNMENT }}
+          projectId: si-assignment
+          expires: 7d
