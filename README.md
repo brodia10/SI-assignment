@@ -36,6 +36,10 @@ A detailed, dated record is in [docs/process-log.md](docs/process-log.md).
 - **Scrap costing:** I followed the example scenario. The good outputs of a work order carry
   the full input cost and scrap carries $0, so scrap sales are 100% margin. In production I'd
   discuss scrap-credit costing with the client.
+- **Cost rounding:** each good output's share is rounded *down* to the cent and the leftover
+  goes to the last good output, so the outputs always add up to the input cost exactly and no
+  output can end up with a negative cost. A work order must have at least one non-scrap
+  output; otherwise the input cost would have nowhere to go.
 - **Margin** is profit ÷ sale price (matches the scenario's 22.9%).
 
 ### Making it hard to get wrong
