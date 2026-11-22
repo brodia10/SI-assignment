@@ -1,7 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Savage.Api.Auth;
 using Savage.Api.Data;
+using Savage.Api.Features.Locations;
 using Savage.Api.Features.Me;
+using Savage.Api.Features.Processing;
+using Savage.Api.Features.Products;
+using Savage.Api.Features.Purchasing;
+using Savage.Api.Features.Receiving;
+using Savage.Api.Features.Reports;
+using Savage.Api.Features.Sales;
+using Savage.Api.Features.Users;
+using Savage.Api.Features.Vendors;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,8 +46,18 @@ app.UseAuthorization();
 app.MapOpenApi().AllowAnonymous();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous().ExcludeFromDescription();
 
+// One endpoint group per feature. Every group needs an app user (fallback policy); Users and Reports are admin-only.
 var api = app.MapGroup("/api");
 api.MapMeEndpoints();
+api.MapProductsEndpoints();
+api.MapVendorsEndpoints();
+api.MapLocationsEndpoints();
+api.MapUsersEndpoints();
+api.MapPurchasingEndpoints();
+api.MapReceivingEndpoints();
+api.MapProcessingEndpoints();
+api.MapSalesEndpoints();
+api.MapReportsEndpoints();
 
 app.Run();
 

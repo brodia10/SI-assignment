@@ -1,4 +1,6 @@
 import { Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { AppRoutes } from "./app/AppRoutes";
+import { toRole } from "./app/navigation";
 import { useAuth } from "./auth/AuthProvider";
 import { LoginPage } from "./features/auth/LoginPage";
 
@@ -25,13 +27,5 @@ export default function App() {
       </Stack>
     );
 
-  return (
-    <Stack spacing={2} sx={{ p: 4 }}>
-      <Typography variant="h4">Welcome, {auth.me.email}</Typography>
-      <Typography>Role: {auth.me.role}</Typography>
-      <Button variant="outlined" onClick={auth.signOut} sx={{ alignSelf: "flex-start" }}>
-        Sign out
-      </Button>
-    </Stack>
-  );
+  return <AppRoutes role={toRole(auth.me.role)} email={auth.me.email} onSignOut={auth.signOut} />;
 }

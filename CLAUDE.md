@@ -4,7 +4,13 @@
 An iPad-first inventory app for a metal processor. It covers purchase orders, receiving into
 locations, work orders (one item becomes many, and the cost carries over), sales orders shipped
 by container, and reports on inventory and margin. It's an interview take-home for Savage
-Innovations. Requirements and decisions: `README.md`, `docs/plan.md`, `docs/domain-glossary.md`.
+Innovations.
+
+**The requirements are the source of truth.** Read them before planning any feature. If a derived doc disagrees
+with them, the requirements win. Keep what the assignment says separate from decisions we made.
+@docs/requirements.md
+
+Our decisions and design: `README.md` (questions, assumptions), `docs/plan.md`, `docs/domain-glossary.md`.
 
 ## Tech stack
 - API: ASP.NET Core on .NET 10 (minimal APIs, one endpoint group per feature), EF Core, SQL Server
@@ -19,8 +25,10 @@ Innovations. Requirements and decisions: `README.md`, `docs/plan.md`, `docs/doma
 - `api/Savage.Api/Domain/`: entities and pure business logic (e.g. `CostAllocator`)
 - `api/Savage.Api/Data/`: DbContext, migrations, seed data
 - `api/Savage.Api.Tests/`: xUnit tests
-- `web/src/features/<feature>/`: screens for one feature
-- `web/src/components/`: shared touch-friendly UI (BigButton, PickList, WeightInput, ConfirmSummary)
+- `web/src/features/<feature>/`: screens for one feature (entry page is wired in already; add sub-routes inside it)
+- `web/src/app/`: shell: `navigation.ts` (which role sees which lane), routes, layout, home tiles
+- `web/src/components/`: shared touch-friendly UI (BigButton, PickList, WeightInput, ConfirmSummary, MoneyText,
+  PageHeader), imported from `components/index.ts`
 - `web/src/api/`: generated OpenAPI types (`schema.d.ts`, don't hand-edit) + client
 
 ## How things get done
