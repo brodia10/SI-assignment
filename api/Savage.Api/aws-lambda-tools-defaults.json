@@ -1,0 +1,12 @@
+{
+  "profile": "",
+  "region": "us-east-2",
+  "configuration": "Release",
+  "function-name": "si-assignment-api",
+  "function-runtime": "dotnet10",
+  "function-architecture": "arm64",
+  "function-memory-size": 512,
+  "function-timeout": 30,
+  "function-handler": "Savage.Api",
+  "function-role": "arn:aws:iam::707949469830:role/si-assignment-lambda"
+}

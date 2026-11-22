@@ -1,41 +1,46 @@
+using Microsoft.EntityFrameworkCore;
+using Savage.Api.Auth;
+using Savage.Api.Data;
+using Savage.Api.Features.Me;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// Runs as a normal Kestrel app locally; inside AWS Lambda (function URL) this swaps in the Lambda host.
+builder.Services.AddAWSLambdaHosting(LambdaEventSource.HttpApi);
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("Default"),
+        sql => sql.EnableRetryOnFailure()));
+
+builder.Services.AddFirebaseAuth(builder.Configuration);
 builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+    p.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (args.Contains("seed-demo-users"))
 {
-    app.MapOpenApi();
+    await DemoUserSeeder.RunAsync(app.Services);
+    return;
 }
 
-app.UseHttpsRedirection();
+app.UseExceptionHandler();
+app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+app.MapOpenApi().AllowAnonymous();
+app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous().ExcludeFromDescription();
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+var api = app.MapGroup("/api");
+api.MapMeEndpoints();
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+// Lets the integration tests start the app with WebApplicationFactory<Program>.
+public partial class Program;

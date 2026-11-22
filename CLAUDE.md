@@ -51,7 +51,7 @@ Innovations. Requirements and decisions: `README.md`, `docs/plan.md`, `docs/doma
   touch them if the lane brief says so.
 
 ## Don't
-- Commit secrets: `~/secrets/`, `.env*`, `appsettings.Development.local.json`, Firebase admin JSON.
+- Commit secrets: `~/secrets/`, `.env*` (except `web/.env.production`, public values only), Firebase admin JSON. Local API secrets live in `dotnet user-secrets` (shared by all worktrees).
 - Commit or push without being asked.
 
 ## Validation loop

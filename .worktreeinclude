@@ -1,3 +1,2 @@
 # Untracked files to copy into new worktrees (gitignore syntax).
 web/.env.local
-api/Savage.Api/appsettings.Development.local.json
