@@ -1,0 +1,109 @@
+# Production deploy on every merge to main: checks → API to Lambda → web to Firebase Hosting.
+# The API goes first so the web app never ships ahead of the endpoints it calls.
+# Database migrations are NOT run here; see README → Deploy.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One production deploy at a time, and never cancel one halfway through.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  FUNCTION_NAME: si-assignment-api
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  deploy-api:
+    name: API → Lambda
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production # OIDC trust policy only accepts this environment, which only main can use
+    permissions:
+      contents: read
+      id-token: write # lets the job request a GitHub OIDC token to sign in to AWS
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # the migration check below diffs against the previous main
+
+      - name: Warn if this push adds a migration
+        continue-on-error: true # only a warning; never block the deploy (e.g. if the old SHA is gone)
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          changed=$(git diff --name-only "$BEFORE" "$GITHUB_SHA" -- api/Savage.Api/Data/Migrations)
+          if [ -n "$changed" ]; then
+            echo "::warning title=Migration not applied::This push changes EF migrations. Migrations are manual: run 'dotnet ef database update' against RDS (README → Deploy)."
+            echo "$changed"
+          fi
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet tool restore
+
+      # Settings (runtime, arm64, Release) come from api/Savage.Api/aws-lambda-tools-defaults.json.
+      - name: Package
+        run: dotnet lambda package --project-location api/Savage.Api --output-package "$RUNNER_TEMP/api.zip"
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Code only: memory, timeout, env vars and the execution role stay as configured, so the
+      # deploy role needs no UpdateFunctionConfiguration or iam:PassRole.
+      - name: Update function code
+        run: |
+          aws lambda update-function-code --function-name "$FUNCTION_NAME" \
+            --zip-file "fileb://$RUNNER_TEMP/api.zip" --query 'LastModified' --output text
+          aws lambda wait function-updated-v2 --function-name "$FUNCTION_NAME"
+
+      - name: Smoke test /health
+        run: |
+          url=$(aws lambda get-function-url-config --function-name "$FUNCTION_NAME" --query FunctionUrl --output text)
+          curl --fail --silent --show-error --retry 3 --retry-all-errors "${url%/}/health"
+
+  deploy-web:
+    name: Web → Firebase Hosting
+    needs: deploy-api
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Public Firebase config and the API URL come from web/.env.production (committed, no secrets).
+      - run: pnpm -C web build
+
+      - uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0.11.0 (third-party, gets the deploy key: pinned to a commit)
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SI_ASSIGNMENT }}
+          projectId: si-assignment
+          channelId: live

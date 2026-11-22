@@ -7,5 +7,6 @@
     "typecheck": "pnpm -C web typecheck && dotnet build api/SI.slnx --nologo -v q",
     "test": "pnpm -C web test && dotnet test api/SI.slnx --nologo -v q",
     "build": "pnpm -C web build && dotnet build api/SI.slnx -c Release --nologo -v q"
-  }
+  },
+  "packageManager": "pnpm@10.28.1"
 }
