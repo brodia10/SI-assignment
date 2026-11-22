@@ -72,9 +72,11 @@ handle mistakes and followed them:
   + SQL Server code, so moving means changing the connection string and the hosting setup, not the
   application.
 - **Security trade-off:** the database accepts connections from the internet, protected by a strong
-  password and required TLS, instead of sitting on a private network. A private network would need a
-  paid NAT gateway so the API could still reach Google to check sign-in tokens. In production I'd keep the
-  database private.
+  password and an encrypted connection, instead of sitting on a private network. A private network
+  would need a paid NAT gateway so the API could still reach Google to check sign-in tokens.
+  The connection is encrypted (`Encrypt=True`) but doesn't yet validate the RDS certificate
+  (`TrustServerCertificate=True`). In production I'd keep the database private and turn certificate
+  validation on.
 
 ### Sign-in
 
@@ -99,6 +101,52 @@ handle mistakes and followed them:
 ## Setup
 
 _TBD_
+
+## Deploy
+
+Live app: https://si-assignment.web.app
+
+```
+iPad browser ──► Firebase Hosting (React app)
+     │  signs in with Firebase Auth, gets an ID token
+     ▼
+AWS Lambda function URL (ASP.NET Core API) ──► RDS SQL Server Express (us-east-2)
+     validates the token with Google's public keys, then looks up the user's role in SQL
+```
+
+Every deploy is one command, run from the repo root. Prerequisites: the AWS CLI (signed in),
+the Firebase CLI (`firebase-tools`, signed in with `firebase login`), and the .NET tools pinned
+in `dotnet-tools.json` (`dotnet tool restore` once).
+
+| What | Command |
+|---|---|
+| API → Lambda | `dotnet lambda deploy-function --project-location api/Savage.Api` (settings in `aws-lambda-tools-defaults.json`; keeps the existing env vars) |
+| Web → Firebase Hosting | `pnpm -C web build && firebase deploy --only hosting` (project in `.firebaserc`, public config in `web/.env.production`) |
+| Schema → RDS | `dotnet ef database update --project api/Savage.Api` |
+| Demo users → Firebase + RDS | `dotnet run --project api/Savage.Api -- seed-demo-users` (safe to re-run) |
+
+The last two read the RDS connection string from an env var. Set it so the password is read from
+a file and never lands in shell history or process arguments:
+
+```sh
+export ConnectionStrings__Default="Server=<rds-host>,1433;Database=SiAssignment;User Id=<user>;Password=$(cat ~/secrets/si-rds-password.txt);Encrypt=True;TrustServerCertificate=True"
+```
+
+The seeder takes the demo emails and passwords from `dotnet user-secrets` (key `Demo:Users`), and
+the Firebase service account from the file named by `Firebase:CredentialsPath` (kept outside the repo).
+
+**One-time setup** (already done for the live app):
+
+- **Firebase:** email/password sign-in is on. Self sign-up and account deletion are turned off,
+  because the app is invite-only. Users are created through the Admin SDK (the seeder now, the
+  admin's invite screen later).
+- **Lambda env vars:** `ConnectionStrings__Default` (RDS) and `Firebase__CredentialsJson`
+  (the service account the Admin SDK uses to invite users). Non-secret settings (Firebase
+  project ID, CORS origins) are in `appsettings.json`.
+- **Lambda function URL:** auth type `NONE`, so the API does its own auth (Firebase token +
+  role in SQL) and its own CORS (only the Firebase Hosting origins).
+- **Secrets** never go in the repo. Locally they're in `dotnet user-secrets`. On Lambda they're
+  env vars, which AWS encrypts at rest. In production I'd move them to AWS Secrets Manager.
 
 ## How I used AI tools
 
