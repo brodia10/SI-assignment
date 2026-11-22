@@ -108,6 +108,24 @@ client.
     through the Admin SDK, which this setting doesn't affect. I left email enumeration protection
     on, so nobody can probe which emails have accounts.
 
+## Phase 6 — CI/CD
+
+15. **Automated deploys after production fell three PRs behind main without anyone noticing.**
+    Manual deploy commands are easy to forget when several worktrees merge in an hour. Now every PR
+    runs lint, typecheck and tests (a ruleset on `main` blocks merging a red PR) and gets a
+    Firebase preview URL. Every merge deploys the API to Lambda and then the web app to Firebase.
+    - **No AWS keys in GitHub.** The deploy job signs in with GitHub's OIDC token. The IAM role
+      trusts only this repo's `production` environment, which only `main` can deploy to. Its IAM
+      policy only allows uploading and reading code for the one Lambda function. It has no
+      `UpdateFunctionConfiguration` or `iam:PassRole`, so it can't change env vars or the
+      execution role. The code review caught that I'd described the role as unable to see
+      secrets. That's not true: anything that can deploy code can read the function's env vars.
+      So the guard is who can run the deploy (only `main`), and the README now says so.
+    - **Migrations stay manual**, so a merge can never change the production schema without
+      someone deciding to. The deploy run shows a warning when a merge adds a migration.
+    - **Previews call the production API.** CORS allows this project's preview hostnames
+      (`si-assignment--*.web.app`) by pattern, not every `*.web.app` site.
+
 ## Open questions / assumptions
 
 _(Filled in during the interview. Each item is either an assumption to document in the README or

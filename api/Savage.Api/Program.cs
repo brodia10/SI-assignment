@@ -26,9 +26,9 @@ builder.Services.AddFirebaseAuth(builder.Configuration);
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+var corsOrigins = CorsOrigins.FromConfig(builder.Configuration);
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
+    p.SetIsOriginAllowed(corsOrigins.IsAllowed).AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 
