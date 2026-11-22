@@ -23,6 +23,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         sql => sql.EnableRetryOnFailure()));
 
 builder.Services.AddFirebaseAuth(builder.Configuration);
+builder.Services.AddUsersFeature();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
