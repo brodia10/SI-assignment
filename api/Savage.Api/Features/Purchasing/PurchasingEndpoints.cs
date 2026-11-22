@@ -14,17 +14,11 @@ public static class PurchasingEndpoints
             .WithTags("Purchasing");
 
         // The pick lists for the New PO screen. Purchasing-specific on purpose: only active suppliers, and products
-        // with their default buy price. The admin's full vendor/product screens live in Lane A.
+        // with their default buy price. Adding a supplier in the field uses the Vendors feature's
+        // POST /api/vendors/quick-add, so there's one rule for new vendors.
         group.MapGet("/form-options", (AppDbContext db, CancellationToken ct) =>
                 PurchaseOrderQueries.FormOptionsAsync(db, ct))
             .WithName("GetPurchaseOrderFormOptions");
-
-        group.MapPost("/suppliers", async (QuickAddSupplierRequest request, AppDbContext db, CancellationToken ct) =>
-                (await QuickAddSupplierHandler.HandleAsync(db, request, ct)).ToHttpResult())
-            .WithName("QuickAddSupplier")
-            .Produces<SupplierOption>()
-            .ProducesValidationProblem()
-            .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapGet("/", (PurchaseOrderStatus? status, AppDbContext db, CancellationToken ct) =>
                 PurchaseOrderQueries.ListAsync(db, status, ct))

@@ -195,12 +195,16 @@ export function useCreatePurchaseOrder() {
   });
 }
 
+/**
+ * Adds a supplier by name through the Vendors feature's quick-add (one rule for new vendors, shared with sales).
+ * A name already on file comes back as that vendor, and a customer we now buy from becomes "Both".
+ */
 export function useQuickAddSupplier() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (name: string): Promise<Supplier> => {
       const s = await unwrap(
-        api.POST("/api/purchase-orders/suppliers", { body: { name } }),
+        api.POST("/api/vendors/quick-add", { body: { name, kind: "Supplier" } }),
         "Couldn't add the supplier.",
       );
       return { id: n(s.id), name: s.name };

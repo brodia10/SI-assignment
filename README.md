@@ -120,18 +120,60 @@ AWS Lambda function URL (ASP.NET Core API) ──► RDS SQL Server Express (us-
      validates the token with Google's public keys, then looks up the user's role in SQL
 ```
 
-Every deploy is one command, run from the repo root. Prerequisites: the AWS CLI (signed in),
-the Firebase CLI (`firebase-tools`, signed in with `firebase login`), and the .NET tools pinned
-in `dotnet-tools.json` (`dotnet tool restore` once).
+### What's automated (GitHub Actions)
+
+| When | What runs | Workflow |
+|---|---|---|
+| Every PR | Lint, typecheck, and tests (Vitest + xUnit, including the SQL Server tests via Testcontainers). A ruleset on `main` blocks merging until this passes. | `ci.yml` |
+| Every PR | Web app built and deployed to a Firebase **preview channel**. The URL is commented on the PR and expires after 7 days. | `preview.yml` |
+| Merge to `main` | The same checks, then **API → Lambda** (code only, then a `/health` smoke test), then **web → Firebase Hosting** (live). | `deploy.yml` |
+
+- **No AWS keys are stored in GitHub.** The API job signs in with GitHub's OIDC token and assumes
+  the IAM role `si-assignment-github-deploy` (ARN in the repo variable `AWS_DEPLOY_ROLE_ARN`). The
+  role trusts only this repo's `production` environment, which only `main` can deploy to. Its IAM
+  policy allows uploading code to the `si-assignment-api` function and reading it, and nothing
+  else. It can't change memory, timeout, env vars or the execution role. Those stay manual (below).
+- **What the role can see:** anything that can deploy code to the function can also read its
+  secrets. AWS returns the function's env vars in the deploy response, and new code could read
+  them anyway. So the real protection is *who can run the deploy*: only a merge to `main`. Moving
+  the secrets to AWS Secrets Manager (see Secrets below) would take them out of the env vars.
+- **API before web:** the web app never goes live ahead of the endpoints it calls.
+- **Previews call the production API.** CORS allows this project's preview hostnames
+  (`Cors:PreviewOriginPattern`) but not other `*.web.app` sites. Previews from forks are skipped,
+  because forks don't get repo secrets.
+- Firebase deploys use a service account that `firebase init hosting:github` created. Its key is in
+  the repo secret `FIREBASE_SERVICE_ACCOUNT_SI_ASSIGNMENT`. It's a repo secret, not limited to the
+  `production` environment, because PR previews need it too. So anyone who can push a branch to
+  this repo could deploy the live site. That's fine for a one-person repo. With a team I'd switch
+  to keyless Workload Identity Federation and separate preview and live identities.
+- **Rollback:** revert the PR. The revert merges to `main` and deploys the previous code. The
+  smoke test only checks that the API starts (`/health` doesn't touch the database), so a bad
+  connection string or a missing migration shows up as API errors, not as a failed deploy.
+- When several PRs merge quickly, a deploy waiting in the queue is replaced by the newest one. The
+  newest deploy ships all the merged code, but its migration warning only covers its own merge.
+
+### What's still manual
+
+- **Database migrations.** A merge never changes the production schema on its own. When a PR
+  adds a migration, apply it to RDS **before merging**. Keep migrations additive (new tables and
+  columns) so the API that's still running keeps working until the deploy finishes. The deploy
+  run shows a warning if a merge includes migration changes. Later this could become an EF
+  migration bundle run behind a manual approval.
+- **Demo users**, and Lambda configuration (env vars, memory, timeout).
+
+Run these from the repo root. Prerequisites: the AWS CLI (signed in), the Firebase CLI
+(`firebase-tools`, signed in with `firebase login`), and the .NET tools pinned in
+`dotnet-tools.json` (`dotnet tool restore` once). The last two rows deploy code too, so they work
+as a manual fallback if Actions is down.
 
 | What | Command |
 |---|---|
-| API → Lambda | `dotnet lambda deploy-function --project-location api/Savage.Api` (settings in `aws-lambda-tools-defaults.json`; keeps the existing env vars) |
-| Web → Firebase Hosting | `pnpm -C web build && firebase deploy --only hosting` (project in `.firebaserc`, public config in `web/.env.production`) |
 | Schema → RDS | `dotnet ef database update --project api/Savage.Api` |
 | Demo users → Firebase + RDS | `dotnet run --project api/Savage.Api -- seed-demo-users` (safe to re-run) |
+| Lambda config (memory, timeout) | `dotnet lambda deploy-function --project-location api/Savage.Api` (settings in `aws-lambda-tools-defaults.json`; keeps the existing env vars; also deploys code) |
+| Web → Firebase Hosting (fallback) | `pnpm -C web build && firebase deploy --only hosting` (project in `.firebaserc`, public config in `web/.env.production`) |
 
-The last two read the RDS connection string from an env var. Set it so the password is read from
+The first two read the RDS connection string from an env var. Set it so the password is read from
 a file and never lands in shell history or process arguments:
 
 ```sh
@@ -143,6 +185,10 @@ the Firebase service account from the file named by `Firebase:CredentialsPath` (
 
 **One-time setup** (already done for the live app):
 
+- **CI/CD:** a GitHub OIDC identity provider in IAM, plus the deploy role described above. A
+  `production` environment in GitHub limited to `main`. A ruleset on `main` requiring the
+  "Lint, typecheck, test" check. `firebase init hosting:github` for the Firebase service account
+  secret.
 - **Firebase:** email/password sign-in is on. Self sign-up and account deletion are turned off,
   because the app is invite-only. Users are created through the Admin SDK (the seeder now, the
   admin's invite screen later).
@@ -150,7 +196,8 @@ the Firebase service account from the file named by `Firebase:CredentialsPath` (
   (the service account the Admin SDK uses to invite users). Non-secret settings (Firebase
   project ID, CORS origins) are in `appsettings.json`.
 - **Lambda function URL:** auth type `NONE`, so the API does its own auth (Firebase token +
-  role in SQL) and its own CORS (only the Firebase Hosting origins).
+  role in SQL) and its own CORS (only the Firebase Hosting origins, plus this project's preview
+  channels via `Cors:PreviewOriginPattern`).
 - **Secrets** never go in the repo. Locally they're in `dotnet user-secrets`. On Lambda they're
   env vars, which AWS encrypts at rest. In production I'd move them to AWS Secrets Manager.
 

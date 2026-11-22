@@ -310,68 +310,6 @@ public class PurchasingAndReceivingTests(SqlServerFixture sql)
         Assert.Equal(1.35m, options.Products.Single(p => p.Id == ProductIds.AluminumSheet).DefaultBuyPricePerLb);
     }
 
-    // ---- Quick-add supplier ----
-
-    [Fact]
-    public async Task Quick_add_creates_a_supplier_flagged_for_admin_review()
-    {
-        await using var db = await sql.CreateMigratedContextAsync();
-
-        var added = Value(await QuickAddSupplierHandler.HandleAsync(db, new("  Ohio Valley   Metals ")));
-
-        Assert.Equal("Ohio Valley Metals", added.Name);
-        var vendor = await db.Vendors.AsNoTracking().SingleAsync(v => v.Id == added.Id);
-        Assert.Equal(VendorKind.Supplier, vendor.Kind);
-        Assert.True(vendor.AddedByPurchaser);
-        Assert.Contains(added, (await PurchaseOrderQueries.FormOptionsAsync(db)).Suppliers);
-    }
-
-    [Fact]
-    public async Task Quick_add_of_an_existing_name_returns_that_supplier()
-    {
-        await using var db = await sql.CreateMigratedContextAsync();
-
-        var added = Value(await QuickAddSupplierHandler.HandleAsync(db, new("great lakes steel supply")));
-
-        Assert.Equal(VendorIds.Supplier, added.Id);
-        Assert.Equal("Great Lakes Steel Supply", added.Name);
-        Assert.Equal(2, await db.Vendors.CountAsync());
-    }
-
-    [Fact]
-    public async Task Quick_add_of_a_customers_name_makes_it_both()
-    {
-        await using var db = await sql.CreateMigratedContextAsync();
-
-        var added = Value(await QuickAddSupplierHandler.HandleAsync(db, new("Buckeye Fabrication")));
-
-        Assert.Equal(VendorIds.Customer, added.Id);
-        Assert.Equal(VendorKind.Both, (await db.Vendors.AsNoTracking().SingleAsync(v => v.Id == added.Id)).Kind);
-    }
-
-    [Fact]
-    public async Task Quick_add_of_a_turned_off_supplier_is_refused()
-    {
-        await using var db = await sql.CreateMigratedContextAsync();
-        var supplier = await db.Vendors.SingleAsync(v => v.Id == VendorIds.Supplier);
-        supplier.IsActive = false;
-        await db.SaveChangesAsync();
-
-        var result = await QuickAddSupplierHandler.HandleAsync(db, new("Great Lakes Steel Supply"));
-
-        Assert.Equal(FailureKind.Conflict, result.Failure?.Kind);
-    }
-
-    [Fact]
-    public async Task Quick_add_needs_a_name()
-    {
-        await using var db = await sql.CreateMigratedContextAsync();
-
-        var result = await QuickAddSupplierHandler.HandleAsync(db, new("   "));
-
-        Assert.Equal(FailureKind.Invalid, result.Failure?.Kind);
-    }
-
     // ---- Helpers ----
 
     private static ReceivePurchaseOrderRequest ScenarioReceipt(PurchaseOrderResponse po) => new(po.Id,

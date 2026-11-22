@@ -138,15 +138,3 @@ public class ReceivePurchaseOrderValidatorTests
         Assert.Contains(field, ReceivePurchaseOrderValidator.Validate(request).Keys);
     }
 }
-
-public class QuickAddSupplierNameTests
-{
-    [Theory]
-    [InlineData("  Acme   Steel  ", "Acme Steel")]
-    [InlineData("Acme\tSteel", "Acme Steel")]
-    [InlineData(null, "")]
-    public void Normalizes_spacing(string? input, string expected)
-    {
-        Assert.Equal(expected, QuickAddSupplierHandler.NormalizeName(input));
-    }
-}
