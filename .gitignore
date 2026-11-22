@@ -1,0 +1,28 @@
+# Dependencies / build output
+node_modules/
+dist/
+bin/
+obj/
+*.tsbuildinfo
+coverage/
+TestResults/
+
+# Secrets and local config (never commit)
+.env
+.env.*
+!.env.example
+appsettings.Development.local.json
+*.pem
+*firebase-adminsdk*.json
+.firebase/
+
+# Editors / OS
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.user
+.claude/settings.local.json
+CLAUDE.local.md
+.claude/handoff.md

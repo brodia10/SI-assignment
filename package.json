@@ -1,0 +1,11 @@
+{
+  "name": "si-assignment",
+  "private": true,
+  "scripts": {
+    "dev:web": "pnpm -C web dev",
+    "dev:api": "dotnet watch --project api/Savage.Api",
+    "typecheck": "pnpm -C web typecheck && dotnet build api/SI.slnx --nologo -v q",
+    "test": "pnpm -C web test && dotnet test api/SI.slnx --nologo -v q",
+    "build": "pnpm -C web build && dotnet build api/SI.slnx -c Release --nologo -v q"
+  }
+}

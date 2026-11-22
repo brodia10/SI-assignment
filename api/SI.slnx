@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Savage.Api.Tests/Savage.Api.Tests.csproj" />
+  <Project Path="Savage.Api/Savage.Api.csproj" />
+</Solution>
