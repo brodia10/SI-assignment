@@ -20,15 +20,163 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/work-orders/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetWorkOrderOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-orders/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewWorkOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/work-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PostWorkOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        CreateWorkOrderRequest: {
+            /** Format: int32 */
+            inputItemId: number | string;
+            outputs: components["schemas"]["WorkOrderOutputRequest"][];
+        };
         MeResponse: {
             /** Format: int32 */
             id: number | string;
             email: string;
             role: string;
+        };
+        PostedWorkOrderOutput: {
+            /** Format: int32 */
+            id: number | string;
+            tag: string;
+            productName: string;
+            isScrap: boolean;
+            /** Format: double */
+            weightLbs: number | string;
+            locationName: string;
+            /** Format: double */
+            totalCost: number | string;
+        };
+        PostedWorkOrderResponse: {
+            /** Format: int32 */
+            id: number | string;
+            /** Format: int32 */
+            number: number | string;
+            inputTag: string;
+            outputs: components["schemas"]["PostedWorkOrderOutput"][];
+            warnings: string[];
+        };
+        ProblemDetails: {
+            type?: null | string;
+            title?: null | string;
+            /** Format: int32 */
+            status?: null | number | string;
+            detail?: null | string;
+            instance?: null | string;
+        };
+        WorkOrderInputOption: {
+            /** Format: int32 */
+            id: number | string;
+            tag: string;
+            /** Format: int32 */
+            productId: number | string;
+            productName: string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            totalCost: number | string;
+            locationName: string;
+        };
+        WorkOrderLocationOption: {
+            /** Format: int32 */
+            id: number | string;
+            name: string;
+            kind: string;
+        };
+        WorkOrderOptionsResponse: {
+            inputs: components["schemas"]["WorkOrderInputOption"][];
+            products: components["schemas"]["WorkOrderProductOption"][];
+            locations: components["schemas"]["WorkOrderLocationOption"][];
+        };
+        WorkOrderOutputRequest: {
+            /** Format: int32 */
+            productId: number | string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: int32 */
+            locationId: number | string;
+        };
+        WorkOrderPreviewOutput: {
+            /** Format: int32 */
+            productId: number | string;
+            productName: string;
+            isScrap: boolean;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: int32 */
+            locationId: number | string;
+            locationName: string;
+            /** Format: double */
+            totalCost: null | number | string;
+        };
+        WorkOrderPreviewResponse: {
+            inputTag: string;
+            /** Format: double */
+            inputWeightLbs: number | string;
+            /** Format: double */
+            inputTotalCost: number | string;
+            /** Format: double */
+            outputWeightLbs: number | string;
+            /** Format: double */
+            remainingLbs: number | string;
+            outputs: components["schemas"]["WorkOrderPreviewOutput"][];
+            errors: string[];
+            warnings: string[];
+            canPost: boolean;
+        };
+        WorkOrderProductOption: {
+            /** Format: int32 */
+            id: number | string;
+            name: string;
+            isScrap: boolean;
         };
     };
     responses: never;
@@ -55,6 +203,128 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+        };
+    };
+    GetWorkOrderOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderOptionsResponse"];
+                };
+            };
+        };
+    };
+    PreviewWorkOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWorkOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderPreviewResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    PostWorkOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWorkOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostedWorkOrderResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
         };
