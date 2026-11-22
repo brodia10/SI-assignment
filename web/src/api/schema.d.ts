@@ -204,10 +204,104 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/purchase-orders/form-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPurchaseOrderFormOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/purchase-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListPurchaseOrders"];
+        put?: never;
+        post: operations["CreatePurchaseOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/purchase-orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPurchaseOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/receipts/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetReceivingLocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReceivePurchaseOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        CreatePurchaseOrderLine: {
+            /** Format: int32 */
+            productId: number | string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            pricePerLb: number | string;
+            grade?: null | string;
+        };
+        CreatePurchaseOrderRequest: {
+            /** Format: int32 */
+            vendorId: number | string;
+            lines: components["schemas"]["CreatePurchaseOrderLine"][];
+        };
         HttpValidationProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -226,6 +320,14 @@ export interface components {
         InviteUserResponse: {
             user: components["schemas"]["UserResponse"];
             setPasswordLink: string;
+        };
+        /** @enum {unknown} */
+        LocationKind: "Bay" | "Rack" | "Bin";
+        LocationOption: {
+            /** Format: int32 */
+            id: number | string;
+            name: string;
+            kind: components["schemas"]["LocationKind"];
         };
         LocationResponse: {
             /** Format: int32 */
@@ -250,6 +352,13 @@ export interface components {
             detail?: null | string;
             instance?: null | string;
         };
+        ProductOption: {
+            /** Format: int32 */
+            id: number | string;
+            name: string;
+            /** Format: double */
+            defaultBuyPricePerLb: null | number | string;
+        };
         ProductResponse: {
             /** Format: int32 */
             id: number | string;
@@ -261,9 +370,101 @@ export interface components {
             defaultSellPricePerLb: null | number | string;
             isActive: boolean;
         };
+        PurchaseOrderFormOptions: {
+            suppliers: components["schemas"]["SupplierOption"][];
+            products: components["schemas"]["ProductOption"][];
+        };
+        PurchaseOrderLineResponse: {
+            /** Format: int32 */
+            id: number | string;
+            /** Format: int32 */
+            productId: number | string;
+            productName: string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            pricePerLb: number | string;
+            /** Format: double */
+            lineTotal: number | string;
+            grade: null | string;
+        };
+        PurchaseOrderResponse: {
+            /** Format: int32 */
+            id: number | string;
+            /** Format: int32 */
+            number: number | string;
+            /** Format: int32 */
+            vendorId: number | string;
+            vendorName: string;
+            status: components["schemas"]["PurchaseOrderStatus"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            receivedAt: null | string;
+            /** Format: double */
+            totalWeightLbs: number | string;
+            /** Format: double */
+            total: number | string;
+            lines: components["schemas"]["PurchaseOrderLineResponse"][];
+        };
+        /** @enum {unknown} */
+        PurchaseOrderStatus: "Open" | "Received" | "Voided";
+        PurchaseOrderSummary: {
+            /** Format: int32 */
+            id: number | string;
+            /** Format: int32 */
+            number: number | string;
+            vendorName: string;
+            status: components["schemas"]["PurchaseOrderStatus"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: int32 */
+            lineCount: number | string;
+            /** Format: double */
+            totalWeightLbs: number | string;
+            /** Format: double */
+            total: number | string;
+        };
         QuickAddVendorRequest: {
             name: string;
             kind: string;
+        };
+        ReceiptResponse: {
+            /** Format: int32 */
+            purchaseOrderId: number | string;
+            /** Format: int32 */
+            purchaseOrderNumber: number | string;
+            /** Format: date-time */
+            receivedAt: string;
+            items: components["schemas"]["ReceivedItem"][];
+        };
+        ReceivedItem: {
+            /** Format: int32 */
+            inventoryItemId: number | string;
+            tag: string;
+            /** Format: int32 */
+            purchaseOrderLineId: number | string;
+            productName: string;
+            locationName: string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            orderedWeightLbs: number | string;
+            /** Format: double */
+            totalCost: number | string;
+        };
+        ReceiveLine: {
+            /** Format: int32 */
+            purchaseOrderLineId: number | string;
+            /** Format: int32 */
+            locationId: number | string;
+            /** Format: double */
+            weightLbs: number | string;
+        };
+        ReceivePurchaseOrderRequest: {
+            /** Format: int32 */
+            purchaseOrderId: number | string;
+            lines: components["schemas"]["ReceiveLine"][];
         };
         SaveLocationRequest: {
             name: string;
@@ -289,6 +490,11 @@ export interface components {
         };
         SetPasswordLinkResponse: {
             setPasswordLink: string;
+        };
+        SupplierOption: {
+            /** Format: int32 */
+            id: number | string;
+            name: string;
         };
         UpdateUserRequest: {
             role: string;
@@ -916,6 +1122,183 @@ export interface operations {
             };
             /** @description Bad Gateway */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetPurchaseOrderFormOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderFormOptions"];
+                };
+            };
+        };
+    };
+    ListPurchaseOrders: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["PurchaseOrderStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderSummary"][];
+                };
+            };
+        };
+    };
+    CreatePurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePurchaseOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetPurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetReceivingLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LocationOption"][];
+                };
+            };
+        };
+    };
+    ReceivePurchaseOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceivePurchaseOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
