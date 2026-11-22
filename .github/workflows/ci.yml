@@ -1,0 +1,44 @@
+# PR check: lint, typecheck and test the web app and the API. A ruleset on main requires it.
+# deploy.yml also calls it, so main is never deployed without the same checks passing.
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    name: Lint, typecheck, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6 # version comes from packageManager in package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - run: pnpm install --frozen-lockfile
+      - run: dotnet restore api/SI.slnx
+
+      - name: Lint (web)
+        run: pnpm -C web lint
+      - name: Typecheck (web + API build)
+        run: pnpm typecheck
+      # xUnit's SQL Server tests start a container with Testcontainers; the runner has Docker.
+      - name: Test (Vitest + xUnit)
+        run: pnpm test
