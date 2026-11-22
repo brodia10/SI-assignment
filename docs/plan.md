@@ -32,7 +32,8 @@ Claude Code sessions can build it in parallel without stepping on each other.
 
 ### Network trade-off (for the README)
 Lambda runs **outside** a VPC, and RDS is **publicly reachable** on port 1433. Access is limited by a strong
-generated password and required TLS. The reason: the API has to reach Google to check Firebase
+generated password and an encrypted connection (`Encrypt=True`; the RDS certificate isn't validated
+yet, `TrustServerCertificate=True`). The reason: the API has to reach Google to check Firebase
 login tokens, and a Lambda inside a private VPC would need a NAT gateway (~$30/month) to do that.
 In production I'd put the database in private subnets (or use Azure App Service with VNet integration).
 
