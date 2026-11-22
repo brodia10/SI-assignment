@@ -20,15 +20,393 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sales-orders/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSalesCustomers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-orders/available-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSellableItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListSalesOrders"];
+        put?: never;
+        post: operations["PostSalesOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sales-orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSalesOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetInventoryReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/sales-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetSalesReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListTraceableItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/items/{id}/lineage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetItemLineage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AvailableItem: {
+            /** Format: int32 */
+            id: number | string;
+            tag: string;
+            /** Format: int32 */
+            productId: number | string;
+            productName: string;
+            locationName: string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            defaultSellPricePerLb: null | number | string;
+        };
+        CreateSalesOrderLine: {
+            /** Format: int32 */
+            inventoryItemId: number | string;
+            /** Format: double */
+            pricePerLb: number | string;
+        };
+        CreateSalesOrderRequest: {
+            /** Format: int32 */
+            customerVendorId: number | string;
+            containerNumber: null | string;
+            lines: components["schemas"]["CreateSalesOrderLine"][];
+        };
+        CustomerOption: {
+            /** Format: int32 */
+            id: number | string;
+            name: string;
+        };
+        HttpValidationProblemDetails: {
+            type?: null | string;
+            title?: null | string;
+            /** Format: int32 */
+            status?: null | number | string;
+            detail?: null | string;
+            instance?: null | string;
+            errors?: {
+                [key: string]: string[];
+            };
+        };
+        InventoryLocationGroup: {
+            /** Format: int32 */
+            locationId: number | string;
+            locationName: string;
+            /** Format: int32 */
+            itemCount: number | string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            totalCost: number | string;
+            items: components["schemas"]["InventoryReportItem"][];
+        };
+        InventoryProductGroup: {
+            /** Format: int32 */
+            productId: number | string;
+            productName: string;
+            isScrap: boolean;
+            /** Format: int32 */
+            itemCount: number | string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            totalCost: number | string;
+            locations: components["schemas"]["InventoryLocationGroup"][];
+        };
+        InventoryReport: {
+            products: components["schemas"]["InventoryProductGroup"][];
+            /** Format: int32 */
+            itemCount: number | string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            totalCost: number | string;
+        };
+        InventoryReportItem: {
+            /** Format: int32 */
+            id: number | string;
+            tag: string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            totalCost: number | string;
+        };
+        ItemLineage: {
+            /** Format: int32 */
+            itemId: number | string;
+            purchaseOrder: components["schemas"]["LineagePurchase"];
+            root: components["schemas"]["LineageNode"];
+        };
+        LineageNode: {
+            /** Format: int32 */
+            id: number | string;
+            tag: string;
+            productName: string;
+            locationName: string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            totalCost: number | string;
+            status: string;
+            processedBy: null | components["schemas"]["LineageWorkOrder"];
+            soldOn: null | components["schemas"]["LineageSale"];
+        };
+        LineagePurchase: {
+            /** Format: int32 */
+            id: number | string;
+            /** Format: int32 */
+            number: number | string;
+            vendorName: string;
+            /** Format: date-time */
+            orderedAt: string;
+            /** Format: date-time */
+            receivedAt: null | string;
+            productName: string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            pricePerLb: number | string;
+        };
+        LineageSale: {
+            /** Format: int32 */
+            salesOrderId: number | string;
+            /** Format: int32 */
+            number: number | string;
+            customerName: string;
+            /** Format: date-time */
+            shippedAt: string;
+            /** Format: double */
+            pricePerLb: number | string;
+            /** Format: double */
+            revenue: number | string;
+        };
+        LineageWorkOrder: {
+            /** Format: int32 */
+            id: number | string;
+            /** Format: int32 */
+            number: number | string;
+            /** Format: date-time */
+            processedAt: string;
+            outputs: components["schemas"]["LineageNode"][];
+        };
         MeResponse: {
             /** Format: int32 */
             id: number | string;
             email: string;
             role: string;
+        };
+        SalesOrderCreated: {
+            /** Format: int32 */
+            id: number | string;
+            /** Format: int32 */
+            number: number | string;
+        };
+        SalesOrderDetail: {
+            /** Format: int32 */
+            id: number | string;
+            /** Format: int32 */
+            number: number | string;
+            customerName: string;
+            containerNumber: null | string;
+            /** Format: date-time */
+            shippedAt: string;
+            shippedByEmail: string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            revenue: number | string;
+            lines: components["schemas"]["SalesOrderDetailLine"][];
+        };
+        SalesOrderDetailLine: {
+            /** Format: int32 */
+            inventoryItemId: number | string;
+            tag: string;
+            productName: string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            pricePerLb: number | string;
+            /** Format: double */
+            revenue: number | string;
+        };
+        SalesOrderSummary: {
+            /** Format: int32 */
+            id: number | string;
+            /** Format: int32 */
+            number: number | string;
+            customerName: string;
+            containerNumber: null | string;
+            /** Format: date-time */
+            shippedAt: string;
+            /** Format: int32 */
+            itemCount: number | string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            revenue: number | string;
+        };
+        SalesReport: {
+            orders: components["schemas"]["SalesReportOrder"][];
+            /** Format: double */
+            revenue: number | string;
+            /** Format: double */
+            cost: number | string;
+            /** Format: double */
+            profit: number | string;
+            /** Format: double */
+            margin: null | number | string;
+        };
+        SalesReportLine: {
+            /** Format: int32 */
+            inventoryItemId: number | string;
+            tag: string;
+            productName: string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            pricePerLb: number | string;
+            /** Format: double */
+            revenue: number | string;
+            /** Format: double */
+            cost: number | string;
+            /** Format: double */
+            profit: number | string;
+        };
+        SalesReportOrder: {
+            /** Format: int32 */
+            id: number | string;
+            /** Format: int32 */
+            number: number | string;
+            /** Format: date-time */
+            shippedAt: string;
+            customerName: string;
+            containerNumber: null | string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            revenue: number | string;
+            /** Format: double */
+            cost: number | string;
+            /** Format: double */
+            profit: number | string;
+            /** Format: double */
+            margin: null | number | string;
+            lines: components["schemas"]["SalesReportLine"][];
+        };
+        TraceableItem: {
+            /** Format: int32 */
+            id: number | string;
+            tag: string;
+            productName: string;
+            locationName: string;
+            /** Format: double */
+            weightLbs: number | string;
+            status: string;
         };
     };
     responses: never;
@@ -56,6 +434,217 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["MeResponse"];
                 };
+            };
+        };
+    };
+    ListSalesCustomers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerOption"][];
+                };
+            };
+        };
+    };
+    ListSellableItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailableItem"][];
+                };
+            };
+        };
+    };
+    ListSalesOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderSummary"][];
+                };
+            };
+        };
+    };
+    PostSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSalesOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderCreated"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    GetSalesOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesOrderDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GetInventoryReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InventoryReport"];
+                };
+            };
+        };
+    };
+    GetSalesReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesReport"];
+                };
+            };
+        };
+    };
+    ListTraceableItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TraceableItem"][];
+                };
+            };
+        };
+    };
+    GetItemLineage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ItemLineage"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
