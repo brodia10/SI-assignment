@@ -73,6 +73,22 @@ technology.
     and Google sign-in, so this is a configuration change once we know what they use. In the
     meantime, a "Forgot password?" link reduces the risk.
 
+## Phase 4 — Build workflow
+
+13. **One task = one git worktree = one branch = one Claude Code session = one PR.** I create
+    each task's branch as its own worktree with CodeRabbit's worktree tool (`git gtr`), so several
+    tasks can run side by side in separate folders without stashing or switching branches:
+    - `git gtr new <branch>` creates the worktree and branch. The tool's config copies my local
+      env file in and installs dependencies (`pnpm install`, `dotnet restore`).
+    - `git gtr ai <branch>` starts Claude Code in that worktree. It gets the project's hooks,
+      skills and agents automatically, because they're committed files.
+    - Inside it: `/feature` explores, plans and waits for my approval before building. The
+      validation hooks block finishing while the build or tests fail. The `code-reviewer` agent
+      reviews the diff. `/pr-summary` writes the PR description, and `gh pr create` opens it.
+    - I review and merge the PR, then `git gtr rm <branch>` cleans up the worktree.
+    - Shared pieces (schema, routes, shared components) are built first, so parallel worktrees
+      each stay in their own feature folder and don't conflict.
+
 **My principle:** once I understand the business goals, or one part of them, my next goal is
 to find the known unknowns and resolve them, by answering them myself or by asking the
 client.
