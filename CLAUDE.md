@@ -25,8 +25,10 @@ Our decisions and design: `README.md` (questions, assumptions), `docs/plan.md`, 
 - `api/Savage.Api/Domain/`: entities and pure business logic (e.g. `CostAllocator`)
 - `api/Savage.Api/Data/`: DbContext, migrations, seed data
 - `api/Savage.Api.Tests/`: xUnit tests
-- `web/src/features/<feature>/`: screens for one feature
-- `web/src/components/`: shared touch-friendly UI (BigButton, PickList, WeightInput, ConfirmSummary)
+- `web/src/features/<feature>/`: screens for one feature (entry page is wired in already; add sub-routes inside it)
+- `web/src/app/`: shell: `navigation.ts` (which role sees which lane), routes, layout, home tiles
+- `web/src/components/`: shared touch-friendly UI (BigButton, PickList, WeightInput, ConfirmSummary, MoneyText,
+  PageHeader), imported from `components/index.ts`
 - `web/src/api/`: generated OpenAPI types (`schema.d.ts`, don't hand-edit) + client
 
 ## How things get done

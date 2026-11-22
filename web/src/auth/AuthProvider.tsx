@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
 import { api } from "../api/client";
@@ -32,7 +32,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const doSignOut = () => signOut(auth);
+  const queryClient = useQueryClient();
+  // Drop every cached query, so the next person on a shared iPad never sees the previous user's data.
+  const doSignOut = async () => {
+    await signOut(auth);
+    queryClient.clear();
+  };
 
   let state: AuthState;
   if (firebaseUser === undefined || (firebaseUser && meQuery.isPending)) state = { status: "loading" };
