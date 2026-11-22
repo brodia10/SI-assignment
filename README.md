@@ -60,8 +60,14 @@ handle mistakes and followed them:
   (Infor, Business Central) handle it, and it stops cost data from going inconsistent.
   Only admins can void, because corrections should be rare and authorized.
 - **Weight checks.** At receiving, the weight starts as the PO weight and can be changed to what
-  the scale shows. The app warns if they differ. A work order **blocks** outputs that weigh more
+  the scale shows. The app warns if they differ. The item records the scale weight, and the PO keeps
+  the ordered weight, so the difference is on file. The item's **cost stays at the PO line total**
+  (what was agreed with the supplier), because the requirements say each item "keeps its cost from
+  the PO". They don't say whether cost should follow the scale weight instead (received lbs × PO
+  $/lb), so that's worth confirming with the client. A work order **blocks** outputs that weigh more
   than the input (you can't create metal) and **warns** if they weigh less (yield loss).
+- **Receiving is all or nothing.** A PO is received in one step, with every line at once. Partial
+  deliveries aren't supported yet.
 - **Every record stores who created it and when.**
 
 ### Hosting

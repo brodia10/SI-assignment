@@ -1,11 +1,14 @@
-import { LanePlaceholder } from "../../app/LanePlaceholder";
+import { Navigate, Route, Routes } from "react-router";
+import { PickPurchaseOrder } from "./PickPurchaseOrder";
+import { ReceivePurchaseOrderPage } from "./ReceivePurchaseOrderPage";
 
+/** /receiving (pick an open PO) and /receiving/:purchaseOrderId (put it away). */
 export function ReceivingPage() {
   return (
-    <LanePlaceholder
-      title="Receiving"
-      subtitle="Turn a delivered PO into inventory and put each item away."
-      lane="lane B (Purchasing + Receiving)"
-    />
+    <Routes>
+      <Route index element={<PickPurchaseOrder />} />
+      <Route path=":purchaseOrderId" element={<ReceivePurchaseOrderPage />} />
+      <Route path="*" element={<Navigate to="/receiving" replace />} />
+    </Routes>
   );
 }
