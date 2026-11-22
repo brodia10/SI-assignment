@@ -43,6 +43,10 @@ technology.
    which is a deliberate trade-off against segregation-of-duties convention, explained in the
    README.
 
+**My principle:** once I understand the business goals, or one part of them, my next goal is
+to find the known unknowns and resolve them, by answering them myself or by asking the
+client.
+
 ## Phase 2 — Plan the build
 
 9. **Wrote the build plan before writing code** ([plan.md](plan.md)). Main decisions:
@@ -78,6 +82,8 @@ technology.
 13. **One task = one git worktree = one branch = one Claude Code session = one PR.** I create
     each task's branch as its own worktree with CodeRabbit's worktree tool (`git gtr`), so several
     tasks can run side by side in separate folders without stashing or switching branches:
+    - Every task starts as a GitHub issue, taken from the plan, with a "done when" checklist.
+      Its PR says "Closes #N", so merging closes the issue and the issue list shows what's left.
     - `git gtr new <branch>` creates the worktree and branch. The tool's config copies my local
       env file in and installs dependencies (`pnpm install`, `dotnet restore`).
     - `git gtr ai <branch>` starts Claude Code in that worktree. It gets the project's hooks,
@@ -89,9 +95,18 @@ technology.
     - Shared pieces (schema, routes, shared components) are built first, so parallel worktrees
       each stay in their own feature folder and don't conflict.
 
-**My principle:** once I understand the business goals, or one part of them, my next goal is
-to find the known unknowns and resolve them, by answering them myself or by asking the
-client.
+## Phase 5 — Deploy the walking skeleton
+
+14. **Closed self-sign-up in Firebase, because the app is invite-only.** The login page has no
+    sign-up screen, but that isn't enough. The Firebase web API key is public by design (it ships
+    in the JavaScript bundle), and by default anyone with it can create an account through
+    Firebase's REST API. The API already rejects those accounts, because every request needs a
+    matching user row and role in SQL. I still turned off "create (sign-up)" and "delete" under
+    Authentication → User actions, for three reasons: Firebase shouldn't hold users we never
+    invited, users shouldn't be able to delete their own login and leave a role behind with no
+    account, and bots shouldn't be able to fill the project with junk accounts. Inviting users goes
+    through the Admin SDK, which this setting doesn't affect. I left email enumeration protection
+    on, so nobody can probe which emails have accounts.
 
 ## Open questions / assumptions
 
