@@ -62,8 +62,20 @@ public record SalesReportLine(
 
 // ── Lineage: PO → received item → work orders → sales orders ─────────────────────────
 
-/// <summary>Any item, in any status, that can be traced.</summary>
-public record TraceableItem(int Id, string Tag, string ProductName, string LocationName, decimal WeightLbs, string Status);
+/// <summary>
+/// Any item, in any status, that can be traced. <see cref="LocationName"/> is where the item was last
+/// stored; once it's sold or used up, <see cref="SoldOnNumber"/> or <see cref="UsedInWorkOrderNumber"/>
+/// says where it went instead.
+/// </summary>
+public record TraceableItem(
+    int Id,
+    string Tag,
+    string ProductName,
+    string LocationName,
+    decimal WeightLbs,
+    string Status,
+    int? SoldOnNumber,
+    int? UsedInWorkOrderNumber);
 
 /// <summary>
 /// The whole family of an item: the PO it was bought on, the item that PO line was received as

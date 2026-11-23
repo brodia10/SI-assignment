@@ -87,7 +87,15 @@ public static class ReportQueries
         db.InventoryItems.AsNoTracking()
             .OrderByDescending(i => i.Id)
             .Select(i => new TraceableItem(
-                i.Id, i.Tag, i.Product.Name, i.Location.Name, i.WeightLbs, i.Status.ToString()))
+                i.Id, i.Tag, i.Product.Name, i.Location.Name, i.WeightLbs, i.Status.ToString(),
+                db.SalesOrderLines
+                    .Where(l => l.InventoryItemId == i.Id && l.SalesOrder.Status == SalesOrderStatus.Shipped)
+                    .Select(l => (int?)l.SalesOrder.Number)
+                    .FirstOrDefault(),
+                db.WorkOrders
+                    .Where(w => w.InputItemId == i.Id && w.Status == WorkOrderStatus.Completed)
+                    .Select(w => (int?)w.Number)
+                    .FirstOrDefault()))
             .ToListAsync(ct);
 
     /// <summary>

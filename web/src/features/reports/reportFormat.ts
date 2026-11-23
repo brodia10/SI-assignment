@@ -27,3 +27,28 @@ export function statusLabel(status: string): string {
       return status;
   }
 }
+
+/** What the trace screen needs to say where an item is now. */
+export interface ItemWhereabouts {
+  status: string;
+  locationName: string;
+  soldOnNumber?: number | null;
+  usedInWorkOrderNumber?: number | null;
+}
+
+/**
+ * Where the item is now. A sold or used-up item isn't on the floor anymore, so its last
+ * location would mislead: say which order took it instead.
+ */
+export function currentPlace(item: ItemWhereabouts): string {
+  switch (item.status) {
+    case "Sold":
+      return item.soldOnNumber != null ? `Shipped on SO #${item.soldOnNumber}` : "Shipped";
+    case "Consumed":
+      return item.usedInWorkOrderNumber != null ? `Used in WO #${item.usedInWorkOrderNumber}` : "Used in a work order";
+    case "Voided":
+      return "Voided";
+    default:
+      return item.locationName;
+  }
+}

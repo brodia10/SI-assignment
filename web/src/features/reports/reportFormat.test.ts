@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMargin, statusLabel } from "./reportFormat";
+import { currentPlace, formatMargin, statusLabel } from "./reportFormat";
 
 describe("formatMargin", () => {
   it("shows the scenario's sales order #5001 at 22.9%", () => {
@@ -24,5 +24,25 @@ describe("statusLabel", () => {
     expect(statusLabel("InStock")).toBe("In stock");
     expect(statusLabel("Consumed")).toBe("Processed");
     expect(statusLabel("Sold")).toBe("Sold");
+  });
+});
+
+describe("currentPlace", () => {
+  it("shows the location while the item is in stock", () => {
+    expect(currentPlace({ status: "InStock", locationName: "Rack 4" })).toBe("Rack 4");
+  });
+
+  it("shows the sales order for a sold item, not its old rack", () => {
+    expect(currentPlace({ status: "Sold", locationName: "Rack 4", soldOnNumber: 5001 })).toBe("Shipped on SO #5001");
+  });
+
+  it("shows the work order for a consumed item, not its old bay", () => {
+    expect(currentPlace({ status: "Consumed", locationName: "Bay 2", usedInWorkOrderNumber: 1 })).toBe("Used in WO #1");
+  });
+
+  it("never falls back to the old location once the item has left the floor", () => {
+    expect(currentPlace({ status: "Sold", locationName: "Rack 4", soldOnNumber: null })).toBe("Shipped");
+    expect(currentPlace({ status: "Consumed", locationName: "Bay 2" })).toBe("Used in a work order");
+    expect(currentPlace({ status: "Voided", locationName: "Rack 1" })).toBe("Voided");
   });
 });
