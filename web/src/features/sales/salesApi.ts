@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ApiError, type ApiNumbers, unwrap } from "./apiResult";
@@ -46,14 +46,22 @@ export function useSalesOrder(id: number | null) {
 }
 
 /** Posts a sales order. Afterwards, sales lists and every report are stale (items were sold). */
-export function usePostSalesOrder() {
-  const queryClient = useQueryClient();
-  return useMutation({
+export function postSalesOrderOptions(queryClient: QueryClient) {
+  return {
     mutationFn: (body: CreateSalesOrderRequest) => unwrap(api.POST("/api/sales-orders", { body })),
-    onSettled: () =>
-      Promise.all([
+    // On success, not awaited: the caller's own onSuccess (navigate away) would otherwise run only after the new
+    // in-stock list arrives without the sold items, and the open dialog would flash "Ship 0 items" first.
+    // On failure, awaited: after a 409 the caller says the sold coil is off the order, so it must already be gone.
+    onSettled: (_data: unknown, error: Error | null) => {
+      const refreshed = Promise.all([
         queryClient.invalidateQueries({ queryKey: salesKeys.all }),
         queryClient.invalidateQueries({ queryKey: ["reports"] }),
-      ]),
-  });
+      ]);
+      return error ? refreshed : undefined;
+    },
+  };
+}
+
+export function usePostSalesOrder() {
+  return useMutation(postSalesOrderOptions(useQueryClient()));
 }
