@@ -111,7 +111,7 @@ function ProductFormView({ existing }: { existing?: Product }) {
         helperText="Scrap from a work order carries no cost. The good pieces carry the whole cost."
       />
 
-      <Box sx={{ display: "grid", gap: 3, gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" } }}>
+      <Box sx={{ display: "grid", gap: 3, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
         <Paper variant="outlined" sx={{ p: 2 }}>
           <WeightInput
             label="Buy price"
