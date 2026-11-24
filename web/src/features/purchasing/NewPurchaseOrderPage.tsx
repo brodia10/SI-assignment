@@ -16,7 +16,16 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { BigButton, ConfirmSummary, MoneyText, PageHeader, PickList } from "../../components";
+import {
+  BigButton,
+  ConfirmSummary,
+  insertAt,
+  MoneyText,
+  PageHeader,
+  PickList,
+  UndoSnackbar,
+  useLeaveGuard,
+} from "../../components";
 import { BIG_TOUCH_TARGET } from "../../theme";
 import { type PurchaseOrder, type Supplier, useCreatePurchaseOrder, usePurchaseOrderFormOptions } from "./api";
 import { formatBuyPrice, formatLbs } from "./format";
@@ -40,6 +49,8 @@ export function NewPurchaseOrderPage() {
   const [lines, setLines] = useState<LineDraft[]>([]);
   const [dialog, setDialog] = useState<OpenDialog>({ kind: "none" });
   const [created, setCreated] = useState<PurchaseOrder | null>(null);
+  const [removed, setRemoved] = useState<{ line: LineDraft; index: number } | null>(null);
+  useLeaveGuard(!created && lines.length > 0, "purchase order");
 
   if (options.isPending) return <CircularProgress sx={{ display: "block", mx: "auto", my: 6 }} />;
   if (options.isError)
@@ -56,6 +67,7 @@ export function NewPurchaseOrderPage() {
         onReceive={() => navigate(`/receiving/${created.id}`)}
         onAnother={() => {
           setCreated(null);
+          setRemoved(null);
           setSupplierId(null);
           setLines([]);
           create.reset();
@@ -79,6 +91,18 @@ export function NewPurchaseOrderPage() {
     setDialog({ kind: "none" });
   }
 
+  function removeLine(line: LineDraft) {
+    setRemoved({ line, index: lines.findIndex((l) => l.key === line.key) });
+    setLines((current) => current.filter((l) => l.key !== line.key));
+  }
+
+  function undoRemove() {
+    if (!removed) return;
+    const { line, index } = removed;
+    setLines((current) => insertAt(current, line, index));
+    setRemoved(null);
+  }
+
   function confirm() {
     if (!supplier) return;
     create.mutate(
@@ -94,6 +118,7 @@ export function NewPurchaseOrderPage() {
       {
         onSuccess: (po) => {
           setDialog({ kind: "none" });
+          setRemoved(null);
           setCreated(po);
         },
       },
@@ -163,10 +188,7 @@ export function NewPurchaseOrderPage() {
                   >
                     <EditOutlinedIcon />
                   </IconButton>
-                  <IconButton
-                    aria-label={`Remove ${line.productName}`}
-                    onClick={() => setLines((current) => current.filter((l) => l.key !== line.key))}
-                  >
+                  <IconButton aria-label={`Remove ${line.productName}`} onClick={() => removeLine(line)}>
                     <DeleteOutlineIcon />
                   </IconButton>
                 </Stack>
@@ -208,6 +230,7 @@ export function NewPurchaseOrderPage() {
             disabled={missing !== null}
             onClick={() => {
               create.reset();
+              setRemoved(null); // the undo bar would sit on top of the confirmation
               setDialog({ kind: "confirm" });
             }}
           >
@@ -216,6 +239,12 @@ export function NewPurchaseOrderPage() {
           {missing && <Typography color="text.secondary">{missing}</Typography>}
         </Stack>
       </Paper>
+
+      <UndoSnackbar
+        removal={removed && { key: removed.line.key, message: `Removed ${removed.line.productName}` }}
+        onUndo={undoRemove}
+        onClose={() => setRemoved(null)}
+      />
 
       {dialog.kind === "supplier" && (
         <QuickAddSupplierDialog

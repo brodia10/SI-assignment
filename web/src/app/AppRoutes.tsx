@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { Navigate, Route, Routes } from "react-router";
+import { LeaveGuardProvider } from "../components";
 import { AdminPage } from "../features/admin/AdminPage";
 import { ProcessingPage } from "../features/processing/ProcessingPage";
 import { PurchasingPage } from "../features/purchasing/PurchasingPage";
@@ -34,15 +35,17 @@ interface AppRoutesProps {
 export function AppRoutes({ role, email, onSignOut }: AppRoutesProps) {
   const lanes = lanesFor(role);
   return (
-    <Routes>
-      <Route element={<AppLayout lanes={lanes} email={email} role={role ?? "No role"} onSignOut={onSignOut} />}>
-        <Route index element={<HomePage lanes={lanes} />} />
-        {lanes.map((lane) => {
-          const Page = lanePages[lane.id];
-          return <Route key={lane.id} path={`${lane.path}/*`} element={<Page />} />;
-        })}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+    <LeaveGuardProvider>
+      <Routes>
+        <Route element={<AppLayout lanes={lanes} email={email} role={role ?? "No role"} onSignOut={onSignOut} />}>
+          <Route index element={<HomePage lanes={lanes} />} />
+          {lanes.map((lane) => {
+            const Page = lanePages[lane.id];
+            return <Route key={lane.id} path={`${lane.path}/*`} element={<Page />} />;
+          })}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </LeaveGuardProvider>
   );
 }
