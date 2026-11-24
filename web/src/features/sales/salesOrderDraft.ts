@@ -157,3 +157,30 @@ export function shipSentence(customerName: string, totals: DraftTotals, containe
   const price = totals.revenue === null ? "" : ` for ${formatMoney(totals.revenue)}`;
   return `Ship ${what} to ${customerName}${where}${price}.`;
 }
+
+/** What the "Ship this sales order?" dialog says. Plain data, so the screen can freeze it while the order posts. */
+export interface ShipConfirmation {
+  summary: string;
+  /** One row per product, naming the tags going in the container. */
+  rows: { productId: number; label: string; revenue: number | null }[];
+  containerNumber: string | null;
+}
+
+/** e.g. row label `2 × 12" Slit Coil (C-1003, C-1004) · 19,800 lbs @ $0.55/lb`. */
+export function shipConfirmation(
+  customerName: string,
+  lines: readonly ProductLine[],
+  containerNumber: string | null,
+): ShipConfirmation {
+  return {
+    summary: shipSentence(customerName, draftTotals(lines), containerNumber),
+    rows: lines.map((l) => ({
+      productId: l.productId,
+      label:
+        `${l.items.length} × ${l.productName} (${l.items.map((i) => i.tag).join(", ")}) · ` +
+        `${formatLbs(l.weightLbs)} @ ${l.pricePerLb === null ? "?" : formatPrice(l.pricePerLb)}`,
+      revenue: l.revenue,
+    })),
+    containerNumber,
+  };
+}

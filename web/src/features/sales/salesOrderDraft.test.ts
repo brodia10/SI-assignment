@@ -12,6 +12,7 @@ import {
   productLines,
   type SalesDraft,
   setPrice,
+  shipConfirmation,
   shipSentence,
   toggleItem,
   toRequest,
@@ -94,6 +95,25 @@ describe("scenario step 5", () => {
     expect(shipSentence("Buckeye Fabrication", draftTotals(lines), "MSCU1234567")).toBe(
       "Ship 2 items (19,800 lbs) to Buckeye Fabrication in container MSCU1234567 for $10,890.00.",
     );
+  });
+});
+
+describe("shipConfirmation", () => {
+  it("lists the tags going in the container on each product row, in the order they were picked", () => {
+    const draft = toggleItem(toggleItem(toggleItem(emptyDraft, c1004), aluminum), c1003);
+    const confirm = shipConfirmation("Buckeye Fabrication", productLines(draft, available), "MSCU1234567");
+    expect(confirm.rows).toEqual([
+      { productId: SLIT, label: '2 × 12" Slit Coil (C-1004, C-1003) · 19,800 lbs @ $0.55/lb', revenue: 10890 },
+      { productId: ALUMINUM, label: "1 × Aluminum Sheet (C-1002) · 5,000 lbs @ ?", revenue: null },
+    ]);
+    expect(confirm.summary).toBe("Ship 3 items (24,800 lbs) to Buckeye Fabrication in container MSCU1234567.");
+    expect(confirm.containerNumber).toBe("MSCU1234567");
+  });
+
+  it("reads back scenario step 5", () => {
+    const confirm = shipConfirmation("Buckeye Fabrication", productLines(scenarioDraft(), available), null);
+    expect(confirm.summary).toBe("Ship 2 items (19,800 lbs) to Buckeye Fabrication for $10,890.00.");
+    expect(confirm.rows.map((r) => r.label)).toEqual(['2 × 12" Slit Coil (C-1003, C-1004) · 19,800 lbs @ $0.55/lb']);
   });
 });
 

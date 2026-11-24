@@ -17,8 +17,9 @@ import {
   normalizeContainer,
   type ProductLine,
   productLines,
+  type ShipConfirmation,
   setPrice,
-  shipSentence,
+  shipConfirmation,
   toggleItem,
   toRequest,
 } from "./salesOrderDraft";
@@ -35,6 +36,11 @@ export function NewSalesOrder() {
   const [confirming, setConfirming] = useState(false);
   /** Set after a 409: the order changed under us, so the purchaser must look again before shipping. */
   const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * What the dialog said when "Ship it" was tapped. Posting refreshes the in-stock list, which takes the sold items
+   * off this draft; without this the dialog could read "Ship 0 items" for a moment before the screen moves on.
+   */
+  const [frozen, setFrozen] = useState<ShipConfirmation | null>(null);
 
   // If the list refreshes (e.g. after "someone else just sold that coil"), take sold items off this order.
   useEffect(() => {
@@ -47,6 +53,7 @@ export function NewSalesOrder() {
   const missing = missingSteps(draft, lines);
   const customer = customers.data?.find((c) => c.id === draft.customerId);
   const container = normalizeContainer(draft.containerNumber);
+  const confirmation = frozen ?? (customer ? shipConfirmation(customer.name, lines, container) : null);
 
   if (!customers.data || !items.data)
     return (
@@ -64,9 +71,12 @@ export function NewSalesOrder() {
     );
 
   function ship() {
+    if (frozen) return; // already posting, or posted and about to leave this screen
+    setFrozen(confirmation);
     post.mutate(toRequest(draft, lines), {
       onSuccess: (created) => navigate(`/sales/${created.id}`, { replace: true, state: { justShipped: true } }),
       onError: (error) => {
+        setFrozen(null); // back to the live order, so a retry ships exactly what the dialog shows
         if (!(error instanceof ApiError && error.status === 409)) return; // stays in the dialog to retry
         // The item list refetches and anything gone comes off the order, so close the dialog: "Ship it" must not
         // silently ship a smaller order.
@@ -204,24 +214,23 @@ export function NewSalesOrder() {
       <ConfirmSummary
         open={confirming}
         title="Ship this sales order?"
-        summary={customer ? shipSentence(customer.name, totals, container) : ""}
+        summary={confirmation?.summary ?? ""}
         details={[
-          ...lines.map((l) => ({
-            id: l.productId,
-            label: `${l.items.length} × ${l.productName} (${formatLbs(l.weightLbs)} @ ${
-              l.pricePerLb === null ? "?" : formatPrice(l.pricePerLb)
-            })`,
-            value: l.revenue === null ? "—" : <MoneyText amount={l.revenue} />,
+          ...(confirmation?.rows ?? []).map((r) => ({
+            id: r.productId,
+            label: r.label,
+            value: r.revenue === null ? "—" : <MoneyText amount={r.revenue} />,
           })),
-          { id: "container", label: "Container", value: container ?? "None" },
+          { id: "container", label: "Container", value: confirmation?.containerNumber ?? "None" },
         ]}
-        warning={container ? undefined : "No container number. You can still ship."}
+        warning={confirmation?.containerNumber ? undefined : "No container number. You can still ship."}
         error={post.error ? errorText(post.error) : undefined}
         confirmLabel="Ship it"
         busy={post.isPending}
         onConfirm={ship}
         onCancel={() => {
           setConfirming(false);
+          setFrozen(null);
           post.reset();
         }}
       />
