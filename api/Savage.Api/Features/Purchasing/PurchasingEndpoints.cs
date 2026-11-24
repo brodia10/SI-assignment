@@ -24,6 +24,11 @@ public static class PurchasingEndpoints
                 PurchaseOrderQueries.ListAsync(db, status, ct))
             .WithName("ListPurchaseOrders");
 
+        // Receiving's "Recently received" section: a way back to a receipt's tags and locations after the fact.
+        group.MapGet("/recently-received", (AppDbContext db, CancellationToken ct) =>
+                PurchaseOrderQueries.RecentlyReceivedAsync(db, ct: ct))
+            .WithName("ListRecentlyReceivedPurchaseOrders");
+
         group.MapGet("/{id:int}", async (int id, AppDbContext db, CancellationToken ct) =>
                 await PurchaseOrderQueries.GetAsync(db, id, ct) is { } po
                     ? Results.Ok(po)

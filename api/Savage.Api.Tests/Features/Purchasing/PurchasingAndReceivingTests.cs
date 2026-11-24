@@ -298,6 +298,96 @@ public class PurchasingAndReceivingTests(SqlServerFixture sql)
         Assert.Equal([2203, 2202, 2201], all.Select(p => p.Number));
     }
 
+    // ---- PO detail: what a received PO became ----
+
+    [Fact]
+    public async Task Received_PO_detail_shows_who_received_it_and_the_tag_location_and_status_of_each_line()
+    {
+        await using var db = await sql.CreateMigratedContextAsync();
+        var purchaser = await AddPurchaserAsync(db);
+        var receiver = new AppUser { FirebaseUid = "receiver-uid", Email = "receiver@test.local", Role = UserRole.Admin };
+        db.Users.Add(receiver);
+        await db.SaveChangesAsync();
+        var po = Value(await CreatePurchaseOrderHandler.HandleAsync(db, purchaser.Id, Po2201));
+        Value(await ReceivePurchaseOrderHandler.HandleAsync(db, receiver.Id, ScenarioReceipt(po)));
+
+        // Later on, the coil goes into a work order. The detail shows where the item is now, not just the receipt.
+        await db.InventoryItems.Where(i => i.Tag == "C-1001")
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.Status, InventoryItemStatus.Consumed));
+        db.ChangeTracker.Clear();
+
+        var detail = await PurchaseOrderQueries.GetAsync(db, po.Id);
+
+        Assert.NotNull(detail);
+        Assert.Equal(PurchaseOrderStatus.Received, detail.Status);
+        Assert.Equal("purchaser@test.local", detail.CreatedByEmail);
+        Assert.Equal("receiver@test.local", detail.ReceivedByEmail);
+        Assert.NotNull(detail.ReceivedAt);
+        Assert.Equal(23_550.00m, detail.Total);
+        Assert.Collection(detail.Lines,
+            l =>
+            {
+                Assert.Equal("Hot-Rolled Steel Coil", l.ProductName);
+                var item = Assert.Single(l.ReceivedItems);
+                Assert.Equal("C-1001", item.Tag);
+                Assert.Equal("Bay 2", item.LocationName);
+                Assert.Equal(40_000m, item.WeightLbs);
+                Assert.Equal(16_800.00m, item.TotalCost);
+                Assert.Equal(InventoryItemStatus.Consumed, item.Status);
+            },
+            l =>
+            {
+                Assert.Equal("Aluminum Sheet", l.ProductName);
+                var item = Assert.Single(l.ReceivedItems);
+                Assert.Equal("C-1002", item.Tag);
+                Assert.Equal("Rack 1", item.LocationName);
+                Assert.Equal(5_000m, item.WeightLbs);
+                Assert.Equal(6_750.00m, item.TotalCost);
+                Assert.Equal(InventoryItemStatus.InStock, item.Status);
+            });
+    }
+
+    [Fact]
+    public async Task Open_PO_detail_has_no_receiver_and_no_items()
+    {
+        await using var db = await sql.CreateMigratedContextAsync();
+        var user = await AddPurchaserAsync(db);
+        var po = Value(await CreatePurchaseOrderHandler.HandleAsync(db, user.Id, Po2201));
+
+        var detail = await PurchaseOrderQueries.GetAsync(db, po.Id);
+
+        Assert.NotNull(detail);
+        Assert.Equal("purchaser@test.local", detail.CreatedByEmail);
+        Assert.Null(detail.ReceivedAt);
+        Assert.Null(detail.ReceivedByEmail);
+        Assert.All(detail.Lines, l => Assert.Empty(l.ReceivedItems));
+    }
+
+    [Fact]
+    public async Task Recently_received_lists_received_POs_by_when_they_arrived_not_by_number()
+    {
+        await using var db = await sql.CreateMigratedContextAsync();
+        var user = await AddPurchaserAsync(db);
+        var po2201 = Value(await CreatePurchaseOrderHandler.HandleAsync(db, user.Id, Po2201));
+        var po2202 = Value(await CreatePurchaseOrderHandler.HandleAsync(db, user.Id, Po2201));
+        Value(await CreatePurchaseOrderHandler.HandleAsync(db, user.Id, Po2201)); // #2203 stays open
+        Value(await ReceivePurchaseOrderHandler.HandleAsync(db, user.Id, ScenarioReceipt(po2202)));
+        Value(await ReceivePurchaseOrderHandler.HandleAsync(db, user.Id, ScenarioReceipt(po2201)));
+        // Pin the receipt times so the order doesn't hang on clock resolution: #2201 arrived after #2202.
+        var monday = new DateTimeOffset(2026, 11, 23, 8, 0, 0, TimeSpan.Zero);
+        await db.PurchaseOrders.Where(p => p.Id == po2202.Id).ExecuteUpdateAsync(s => s.SetProperty(p => p.ReceivedAt, monday));
+        await db.PurchaseOrders.Where(p => p.Id == po2201.Id)
+            .ExecuteUpdateAsync(s => s.SetProperty(p => p.ReceivedAt, monday.AddHours(2)));
+
+        var recent = await PurchaseOrderQueries.RecentlyReceivedAsync(db);
+        var newestOnly = await PurchaseOrderQueries.RecentlyReceivedAsync(db, take: 1);
+
+        Assert.Equal([2201, 2202], recent.Select(p => p.Number));
+        Assert.Equal(monday.AddHours(2), recent[0].ReceivedAt);
+        Assert.All(recent, p => Assert.Equal(23_550.00m, p.Total));
+        Assert.Equal([2201], newestOnly.Select(p => p.Number));
+    }
+
     [Fact]
     public async Task Form_options_offer_suppliers_only_and_products_with_their_buy_price()
     {

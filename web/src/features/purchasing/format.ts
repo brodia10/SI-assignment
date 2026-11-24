@@ -1,4 +1,16 @@
+import type { PurchaseOrderStatus } from "./api";
+
 // Display-only text helpers shared by purchasing and receiving.
+
+/** The status chip on a PO, in the list and on its detail screen. */
+export const purchaseOrderStatusChip: Record<
+  PurchaseOrderStatus,
+  { label: string; color: "warning" | "success" | "default" }
+> = {
+  Open: { label: "Waiting to be received", color: "warning" },
+  Received: { label: "Received", color: "success" },
+  Voided: { label: "Voided", color: "default" },
+};
 
 const lbs = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 

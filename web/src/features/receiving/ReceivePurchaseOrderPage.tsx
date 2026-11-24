@@ -17,6 +17,7 @@ import { useNavigate, useParams } from "react-router";
 import { BigButton, ConfirmSummary, MoneyText, PageHeader, PickList, WeightInput } from "../../components";
 import { type PurchaseOrder, usePurchaseOrder } from "../purchasing/api";
 import { formatLbs } from "../purchasing/format";
+import type { PoDetailFrom } from "../purchasing/poDetail";
 import { type Location, type Receipt, useReceivePurchaseOrder, useReceivingLocations } from "./api";
 import {
   describeReceipt,
@@ -54,13 +55,21 @@ export function ReceivePurchaseOrderPage() {
             : `PO #${po.data.number} was voided, so it can't be received.`
         }
         severity="info"
+        detailPath={po.data.status === "Received" ? `/purchasing/${po.data.id}` : undefined}
       />
     );
 
   return <ReceiveForm key={po.data.id} po={po.data} locations={locations.data} receive={receive} />;
 }
 
-function BackToList({ message, severity = "error" }: { message: string; severity?: "error" | "info" }) {
+interface BackToListProps {
+  message: string;
+  severity?: "error" | "info";
+  /** For a PO that's already in: its detail, which shows the tags and locations it was received into. */
+  detailPath?: string;
+}
+
+function BackToList({ message, severity = "error", detailPath }: BackToListProps) {
   const navigate = useNavigate();
   return (
     <>
@@ -68,9 +77,16 @@ function BackToList({ message, severity = "error" }: { message: string; severity
       <Alert severity={severity} sx={{ fontSize: "1.1rem", mb: 2 }}>
         {message}
       </Alert>
-      <BigButton variant="outlined" onClick={() => navigate("/receiving")}>
-        Pick another PO
-      </BigButton>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+        {detailPath && (
+          <BigButton onClick={() => navigate(detailPath, { state: { from: "receiving" } satisfies PoDetailFrom })}>
+            See what it became
+          </BigButton>
+        )}
+        <BigButton variant="outlined" onClick={() => navigate("/receiving")}>
+          Pick another PO
+        </BigButton>
+      </Stack>
     </>
   );
 }

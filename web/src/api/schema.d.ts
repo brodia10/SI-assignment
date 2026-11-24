@@ -236,6 +236,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/purchase-orders/recently-received": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListRecentlyReceivedPurchaseOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/purchase-orders/{id}": {
         parameters: {
             query?: never;
@@ -524,6 +540,8 @@ export interface components {
                 [key: string]: string[];
             };
         };
+        /** @enum {unknown} */
+        InventoryItemStatus: "InStock" | "Consumed" | "Sold" | "Voided";
         InventoryLocationGroup: {
             /** Format: int32 */
             locationId: number | string;
@@ -720,6 +738,7 @@ export interface components {
             /** Format: double */
             lineTotal: number | string;
             grade: null | string;
+            receivedItems: components["schemas"]["ReceivedItemResponse"][];
         };
         PurchaseOrderResponse: {
             /** Format: int32 */
@@ -732,8 +751,10 @@ export interface components {
             status: components["schemas"]["PurchaseOrderStatus"];
             /** Format: date-time */
             createdAt: string;
+            createdByEmail: string;
             /** Format: date-time */
             receivedAt: null | string;
+            receivedByEmail: null | string;
             /** Format: double */
             totalWeightLbs: number | string;
             /** Format: double */
@@ -751,6 +772,8 @@ export interface components {
             status: components["schemas"]["PurchaseOrderStatus"];
             /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
+            receivedAt: null | string;
             /** Format: int32 */
             lineCount: number | string;
             /** Format: double */
@@ -785,6 +808,17 @@ export interface components {
             orderedWeightLbs: number | string;
             /** Format: double */
             totalCost: number | string;
+        };
+        ReceivedItemResponse: {
+            /** Format: int32 */
+            inventoryItemId: number | string;
+            tag: string;
+            locationName: string;
+            /** Format: double */
+            weightLbs: number | string;
+            /** Format: double */
+            totalCost: number | string;
+            status: components["schemas"]["InventoryItemStatus"];
         };
         ReceiveLine: {
             /** Format: int32 */
@@ -1713,6 +1747,26 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["HttpValidationProblemDetails"];
+                };
+            };
+        };
+    };
+    ListRecentlyReceivedPurchaseOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrderSummary"][];
                 };
             };
         };
