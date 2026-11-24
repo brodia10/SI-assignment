@@ -9,6 +9,7 @@ type Schemas = components["schemas"];
 type Num = number | string;
 
 export type PurchaseOrderStatus = Schemas["PurchaseOrderStatus"];
+export type InventoryItemStatus = Schemas["InventoryItemStatus"];
 
 export interface Supplier {
   id: number;
@@ -21,6 +22,16 @@ export interface Product {
   defaultBuyPricePerLb: number | null;
 }
 
+/** The inventory item a received line became, as it is now (it may since have been processed or sold). */
+export interface ReceivedLineItem {
+  inventoryItemId: number;
+  tag: string;
+  locationName: string;
+  weightLbs: number;
+  totalCost: number;
+  status: InventoryItemStatus;
+}
+
 export interface PurchaseOrderLine {
   id: number;
   productId: number;
@@ -29,6 +40,8 @@ export interface PurchaseOrderLine {
   pricePerLb: number;
   lineTotal: number;
   grade: string | null;
+  /** Empty until the PO is received. */
+  receivedItems: ReceivedLineItem[];
 }
 
 export interface PurchaseOrder {
@@ -37,7 +50,9 @@ export interface PurchaseOrder {
   vendorName: string;
   status: PurchaseOrderStatus;
   createdAt: string;
+  createdByEmail: string;
   receivedAt: string | null;
+  receivedByEmail: string | null;
   totalWeightLbs: number;
   total: number;
   lines: PurchaseOrderLine[];
@@ -49,6 +64,7 @@ export interface PurchaseOrderSummary {
   vendorName: string;
   status: PurchaseOrderStatus;
   createdAt: string;
+  receivedAt: string | null;
   lineCount: number;
   totalWeightLbs: number;
   total: number;
@@ -76,7 +92,9 @@ function toPurchaseOrder(po: Schemas["PurchaseOrderResponse"]): PurchaseOrder {
     vendorName: po.vendorName,
     status: po.status,
     createdAt: po.createdAt,
+    createdByEmail: po.createdByEmail,
     receivedAt: po.receivedAt,
+    receivedByEmail: po.receivedByEmail,
     totalWeightLbs: n(po.totalWeightLbs),
     total: n(po.total),
     lines: po.lines.map((l) => ({
@@ -87,6 +105,14 @@ function toPurchaseOrder(po: Schemas["PurchaseOrderResponse"]): PurchaseOrder {
       pricePerLb: n(l.pricePerLb),
       lineTotal: n(l.lineTotal),
       grade: l.grade,
+      receivedItems: l.receivedItems.map((i) => ({
+        inventoryItemId: n(i.inventoryItemId),
+        tag: i.tag,
+        locationName: i.locationName,
+        weightLbs: n(i.weightLbs),
+        totalCost: n(i.totalCost),
+        status: i.status,
+      })),
     })),
   };
 }
@@ -124,6 +150,7 @@ export const purchaseOrderKeys = {
   all: ["purchase-orders"] as const,
   list: (status?: PurchaseOrderStatus) => ["purchase-orders", "list", status ?? "all"] as const,
   detail: (id: number) => ["purchase-orders", "detail", id] as const,
+  recentlyReceived: ["purchase-orders", "recently-received"] as const,
   // Its own root, so invalidating `all` after a create or receive doesn't refetch the suppliers and products too.
   formOptions: ["purchase-order-form-options"] as const,
 };
@@ -143,27 +170,41 @@ export function usePurchaseOrderFormOptions() {
   });
 }
 
+function toSummary(p: Schemas["PurchaseOrderSummary"]): PurchaseOrderSummary {
+  return {
+    id: n(p.id),
+    number: n(p.number),
+    vendorName: p.vendorName,
+    status: p.status,
+    createdAt: p.createdAt,
+    receivedAt: p.receivedAt,
+    lineCount: n(p.lineCount),
+    totalWeightLbs: n(p.totalWeightLbs),
+    total: n(p.total),
+  };
+}
+
 export function usePurchaseOrders(status?: PurchaseOrderStatus) {
   return useQuery({
     queryKey: purchaseOrderKeys.list(status),
-    queryFn: async () => {
-      const data = await unwrap(
-        api.GET("/api/purchase-orders", { params: { query: status ? { status } : {} } }),
-        "Couldn't load purchase orders.",
-      );
-      return data.map(
-        (p): PurchaseOrderSummary => ({
-          id: n(p.id),
-          number: n(p.number),
-          vendorName: p.vendorName,
-          status: p.status,
-          createdAt: p.createdAt,
-          lineCount: n(p.lineCount),
-          totalWeightLbs: n(p.totalWeightLbs),
-          total: n(p.total),
-        }),
-      );
-    },
+    queryFn: async () =>
+      (
+        await unwrap(
+          api.GET("/api/purchase-orders", { params: { query: status ? { status } : {} } }),
+          "Couldn't load purchase orders.",
+        )
+      ).map(toSummary),
+  });
+}
+
+/** The last few receipts, most recent first, so a receipt's tags can be looked up again. */
+export function useRecentlyReceived() {
+  return useQuery({
+    queryKey: purchaseOrderKeys.recentlyReceived,
+    queryFn: async () =>
+      (await unwrap(api.GET("/api/purchase-orders/recently-received"), "Couldn't load recently received POs.")).map(
+        toSummary,
+      ),
   });
 }
 
