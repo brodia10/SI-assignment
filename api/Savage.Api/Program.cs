@@ -45,6 +45,13 @@ if (args.Contains("seed-local-users"))
     return;
 }
 
+// Sample data: the example scenario's PO, receipt, work order and sales order (see ScenarioSeeder).
+if (args.Contains("seed-scenario"))
+{
+    await ScenarioSeeder.RunAsync(app.Services, args);
+    return;
+}
+
 app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();

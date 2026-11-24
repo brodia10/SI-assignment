@@ -252,10 +252,11 @@ as a manual fallback if Actions is down.
 |---|---|
 | Schema → RDS | `dotnet ef database update --project api/Savage.Api` |
 | Demo users → Firebase + RDS | `dotnet run --project api/Savage.Api -- seed-demo-users` (safe to re-run) |
+| Example scenario (sample data) → RDS | `dotnet run --project api/Savage.Api -- seed-scenario` runs the scenario's PO, receipt, work order and sales order through the app's own handlers, as the demo purchaser. It checks the setup data first and skips a database that already has POs (`--even-if-not-empty` to add it anyway). Run it once. |
 | Lambda config (memory, timeout) | `dotnet lambda deploy-function --project-location api/Savage.Api` (settings in `aws-lambda-tools-defaults.json`; keeps the existing env vars; also deploys code) |
 | Web → Firebase Hosting (fallback) | `pnpm -C web build && firebase deploy --only hosting` (project in `.firebaserc`, public config in `web/.env.production`) |
 
-The first two read the RDS connection string from an env var. Set it so the password is read from
+The first three read the RDS connection string from an env var. Set it so the password is read from
 a file and never lands in shell history or process arguments:
 
 ```sh
