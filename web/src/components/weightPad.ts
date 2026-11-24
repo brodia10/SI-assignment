@@ -54,6 +54,41 @@ export function syncPadText(text: string, value: number | null, options: PadOpti
   return padTextToNumber(text) === value ? text : numberToPadText(value, options);
 }
 
+/**
+ * What the pad shows, plus whether it's still a value that came from outside (a default price, the PO weight).
+ * While `prefilled`, the first digit or "." replaces the value instead of adding to it, like a calculator.
+ */
+export interface PadState {
+  text: string;
+  prefilled: boolean;
+}
+
+/** The starting state for a parent's value: a non-empty value counts as prefilled. */
+export function padStateFor(value: number | null | undefined, options: PadOptions = defaultPadOptions): PadState {
+  const text = numberToPadText(value, options);
+  return { text, prefilled: text !== "" };
+}
+
+/**
+ * Applies one key press to the pad state. On a prefilled value a digit or "." starts over, while back and clear
+ * work on the value as shown. After any key the value is the user's own, so later keys append.
+ */
+export function pressPadKey(state: PadState, key: PadKey, options: PadOptions = defaultPadOptions): PadState {
+  // Only a key that would start a new value replaces (not ".", when decimals aren't allowed).
+  const replaces = state.prefilled && key !== "back" && key !== "clear" && applyPadKey("", key, options) !== "";
+  return { text: applyPadKey(replaces ? "" : state.text, key, options), prefilled: false };
+}
+
+/**
+ * The pad state given the parent's value. Returns the same object while the value agrees with what's shown (so
+ * React can skip the update, and the parent echoing a key press back changes nothing). A value that replaces the
+ * text (prefill, product picked, form reset) is marked prefilled.
+ */
+export function syncPadState(state: PadState, value: number | null, options: PadOptions = defaultPadOptions): PadState {
+  const text = syncPadText(state.text, value, options);
+  return text === state.text ? state : { text, prefilled: text !== "" };
+}
+
 /** Text for the big display: thousands separators, keeping a typed trailing "." or zeros ("1,250.5", "40,000."). */
 export function formatPadText(text: string): string {
   if (text === "") return "0";

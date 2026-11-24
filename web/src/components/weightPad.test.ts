@@ -1,5 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { applyPadKey, formatPadText, numberToPadText, type PadKey, padTextToNumber, syncPadText } from "./weightPad";
+import {
+  applyPadKey,
+  defaultPadOptions,
+  formatPadText,
+  numberToPadText,
+  type PadKey,
+  type PadState,
+  padStateFor,
+  padTextToNumber,
+  pressPadKey,
+  syncPadState,
+  syncPadText,
+} from "./weightPad";
 
 const type = (keys: PadKey[], start = "", options?: Parameters<typeof applyPadKey>[2]) =>
   keys.reduce((text, key) => applyPadKey(text, key, options), start);
@@ -41,6 +53,73 @@ describe("applyPadKey", () => {
 
   it("clear empties the value", () => {
     expect(type(["9", "9", "clear"])).toBe("");
+  });
+});
+
+const pricePad = { maxDecimals: 4, maxWholeDigits: 3 };
+const press = (keys: PadKey[], start: PadState, options = pricePad) =>
+  keys.reduce((state, key) => pressPadKey(state, key, options), start);
+
+describe("pressPadKey", () => {
+  const prefilled = (text: string): PadState => ({ text, prefilled: true });
+
+  it("replaces a prefilled value with the first digit, then appends", () => {
+    expect(press(["4", "5"], prefilled("0.42"))).toEqual({ text: "45", prefilled: false });
+    expect(press(["9", "9", "0", "0"], prefilled("10000"), defaultPadOptions)).toEqual({
+      text: "9900",
+      prefilled: false,
+    });
+  });
+
+  it("replaces a prefilled value with the decimal point, so . 4 5 gives 0.45", () => {
+    expect(press(["."], prefilled("0.42")).text).toBe("0.");
+    expect(press([".", "4", "5"], prefilled("0.42")).text).toBe("0.45");
+  });
+
+  it("appends to a value the user typed", () => {
+    expect(press(["5"], { text: "0.42", prefilled: false }).text).toBe("0.425");
+  });
+
+  it("backspace on a prefilled value deletes one character, and later keys append", () => {
+    expect(press(["back"], prefilled("0.42"))).toEqual({ text: "0.4", prefilled: false });
+    expect(press(["back", "5"], prefilled("0.42")).text).toBe("0.45");
+  });
+
+  it("ignores . on a whole-number pad instead of wiping the prefilled value", () => {
+    const wholePounds = { maxDecimals: 0, maxWholeDigits: 6 };
+    expect(press(["."], prefilled("40000"), wholePounds)).toEqual({ text: "40000", prefilled: false });
+  });
+
+  it("clear empties a prefilled value", () => {
+    expect(press(["clear"], prefilled("0.42"))).toEqual({ text: "", prefilled: false });
+  });
+});
+
+describe("padStateFor", () => {
+  it("marks a starting value as prefilled, but not an empty one", () => {
+    expect(padStateFor(0.42, pricePad)).toEqual({ text: "0.42", prefilled: true });
+    expect(padStateFor(null)).toEqual({ text: "", prefilled: false });
+  });
+});
+
+describe("syncPadState", () => {
+  it("keeps the same state object while the parent agrees with the pad", () => {
+    const typed: PadState = { text: "12.", prefilled: false };
+    expect(syncPadState(typed, 12)).toBe(typed);
+  });
+
+  it("does not flag the parent echoing back what was just typed", () => {
+    const afterKey = pressPadKey({ text: "0.42", prefilled: true }, "4", pricePad);
+    expect(syncPadState(afterKey, 4, pricePad)).toBe(afterKey);
+  });
+
+  it("marks a value from the parent as prefilled", () => {
+    expect(syncPadState({ text: "", prefilled: false }, 1.35, pricePad)).toEqual({ text: "1.35", prefilled: true });
+    expect(syncPadState({ text: "45", prefilled: false }, 0.42, pricePad)).toEqual({ text: "0.42", prefilled: true });
+  });
+
+  it("is not prefilled when the parent empties the pad", () => {
+    expect(syncPadState({ text: "0.42", prefilled: true }, null)).toEqual({ text: "", prefilled: false });
   });
 });
 
