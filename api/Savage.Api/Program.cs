@@ -29,6 +29,12 @@ if (args.Contains("seed-demo-users"))
     return;
 }
 
+if (args.Contains("seed-local-users"))
+{
+    await LocalUserSeeder.RunAsync(app.Services);
+    return;
+}
+
 app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();

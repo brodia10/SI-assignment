@@ -1,5 +1,4 @@
 using FirebaseAdmin.Auth;
-using Microsoft.EntityFrameworkCore;
 using Savage.Api.Auth;
 using Savage.Api.Domain;
 
@@ -38,14 +37,7 @@ public static class DemoUserSeeder
                 record = await auth.CreateUserAsync(new UserRecordArgs { Email = demo.Email, Password = demo.Password });
             }
 
-            var user = await db.Users.FirstOrDefaultAsync(u => u.FirebaseUid == record.Uid);
-            if (user is null)
-                db.Users.Add(new AppUser { FirebaseUid = record.Uid, Email = demo.Email, Role = demo.Role });
-            else
-            {
-                user.Role = demo.Role;
-                user.IsActive = true;
-            }
+            await LocalUserSeeder.UpsertAsync(db, record.Uid, demo.Email, demo.Role);
 
             Console.WriteLine($"Demo user ready: {demo.Email} ({demo.Role})");
         }

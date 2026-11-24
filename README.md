@@ -96,7 +96,89 @@ handle mistakes and followed them:
 
 ## Setup
 
-_TBD_
+### Demo sign-ins
+
+These work on the [live app](https://si-assignment.web.app) and locally. They're demo accounts only.
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@example.com` | `SteelCoil-Admin-2201` |
+| Purchaser | `purchaser@example.com` | `SteelCoil-Buyer-2201` |
+
+### Run it locally
+
+Local runs use the real Firebase project for sign-in and a SQL Server container for data. No
+Firebase admin key is needed. The API checks sign-in tokens against Google's public keys, and
+the local database only needs a row for each demo account so the API knows its role.
+
+**Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download), Node 22+,
+[pnpm](https://pnpm.io/installation), and Docker ([OrbStack](https://orbstack.dev) or Docker
+Desktop). On Apple Silicon, SQL Server runs under Rosetta: OrbStack handles that automatically,
+and in Docker Desktop you turn on "Use Rosetta" in settings.
+
+From the repo root:
+
+```sh
+# 1. Dependencies and the pinned .NET tools (dotnet-ef)
+pnpm install
+dotnet restore api/SI.slnx
+dotnet tool restore
+
+# 2. SQL Server 2022 in a container (local-only password)
+docker run -d --name si-sql -e ACCEPT_EULA=Y -e 'MSSQL_SA_PASSWORD=LocalDev_Passw0rd!' \
+  -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+
+# 3. Point the API at it (stored in dotnet user-secrets, outside the repo).
+#    The unset clears a leftover RDS connection string from the Deploy steps, which would win.
+unset ConnectionStrings__Default
+dotnet user-secrets set ConnectionStrings:Default \
+  'Server=localhost,1433;Database=SiAssignment;User Id=sa;Password=LocalDev_Passw0rd!;TrustServerCertificate=True' \
+  --project api/Savage.Api
+
+# 4. Create the schema and seed data, then link the demo sign-ins to the local database
+dotnet ef database update --project api/Savage.Api
+dotnet run --project api/Savage.Api -- seed-local-users
+
+# 5. Web config: the public Firebase values, with the API pointed at localhost
+#    (overwrites web/.env.local; vite build still uses .env.production, so deploys are unaffected)
+grep -v '^VITE_API_BASE_URL=' web/.env.production > web/.env.local
+echo 'VITE_API_BASE_URL=http://localhost:5080' >> web/.env.local
+```
+
+Then run the API and the web app in two terminals:
+
+```sh
+pnpm dev:api   # http://localhost:5080 (health check: /health, OpenAPI: /openapi/v1.json)
+pnpm dev:web   # http://localhost:5173
+```
+
+Open http://localhost:5173 and sign in with a demo account above.
+
+- SQL Server takes about 10–20 seconds to start. If step 4 can't connect, wait and run it again.
+- If port 1433 is already in use, map another one (`-p 14330:1433`) and use `localhost,14330` in
+  the connection string.
+- Step 4's commands are safe to re-run. `seed-local-users` takes the demo UIDs from
+  `appsettings.Development.json`. If a demo account is ever recreated in Firebase, its UID changes
+  and local sign-in gets a 403 until that file is updated.
+
+### Tests and checks
+
+```sh
+pnpm test        # vitest (web) + xUnit (API)
+pnpm typecheck   # tsc (web) + dotnet build (API)
+pnpm -C web lint # Biome
+```
+
+The API tests start their own throwaway SQL Server container (Testcontainers), so Docker must be
+running. They don't use the database from step 2.
+
+### What doesn't work locally
+
+- **Inviting users** and `seed-demo-users`. Both create Firebase accounts, which needs the
+  Firebase admin key, and that isn't shared. Everything else, including role checks, works with
+  the two demo accounts.
+- **Your local data is separate from the live app's**, but the sign-ins aren't: they're the real
+  Firebase accounts. A password reset from the local login screen changes the live demo password.
 
 ## Deploy
 
