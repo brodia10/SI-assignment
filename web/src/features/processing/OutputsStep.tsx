@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import {
+  ActionBar,
   BigButton,
   ConfirmSummary,
   formatMoney,
@@ -43,9 +44,11 @@ import {
   type DraftOutput,
   describeOutputs,
   formatLbs,
+  lastGoodLocation,
   removeOutput,
   roomForOutputs,
   weightBalance,
+  whyNotReviewable,
 } from "./workOrderDraft";
 
 interface OutputsStepProps {
@@ -99,6 +102,7 @@ export function OutputsStep({
   }, [previewError, onInputGone]);
 
   const reviewable = canReview(outputs, balance) && fresh?.canPost === true;
+  const notReviewable = whyNotReviewable(outputs, balance, fresh !== null, fresh?.canPost === true);
 
   function remove(output: DraftOutput) {
     setRemoved({ output, index: outputs.findIndex((o) => o.key === output.key) });
@@ -205,7 +209,7 @@ export function OutputsStep({
         </Alert>
       )}
 
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between" }}>
+      <Box>
         <BigButton
           variant="outlined"
           startIcon={<AddIcon />}
@@ -214,6 +218,17 @@ export function OutputsStep({
         >
           Add output
         </BigButton>
+      </Box>
+
+      <ActionBar>
+        <Box>
+          <Typography sx={{ fontSize: "1.2rem", fontWeight: 700 }}>
+            {outputs.length === 0
+              ? "No outputs yet"
+              : `${outputs.length} ${outputs.length === 1 ? "output" : "outputs"} · ${formatLbs(balance.outputLbs)}`}
+          </Typography>
+          {notReviewable && <Typography color="text.secondary">{notReviewable}</Typography>}
+        </Box>
         <BigButton
           onClick={() => {
             setRemoved(null); // the undo bar would sit on top of the confirmation
@@ -223,7 +238,7 @@ export function OutputsStep({
         >
           Review and post
         </BigButton>
-      </Stack>
+      </ActionBar>
 
       {adding && (
         <AddOutputDialog
@@ -231,6 +246,7 @@ export function OutputsStep({
           locations={locations}
           remainingLbs={Math.max(0, balance.remainingLbs)}
           room={roomForOutputs(outputs)}
+          lastGoodLocationId={lastGoodLocation(outputs, (id) => productsById.get(id)?.isScrap ?? false)}
           onAdd={(entry, count) => {
             onOutputsChange(addOutputs(outputs, entry, count));
             setAdding(false);

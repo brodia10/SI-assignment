@@ -1,4 +1,3 @@
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import {
   Alert,
   Box,
@@ -14,7 +13,16 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { BigButton, ConfirmSummary, MoneyText, PageHeader, PickList, WeightInput } from "../../components";
+import {
+  ActionBar,
+  BigButton,
+  ConfirmSummary,
+  MoneyText,
+  PageHeader,
+  PickList,
+  SuccessCard,
+  WeightInput,
+} from "../../components";
 import { type PurchaseOrder, usePurchaseOrder } from "../purchasing/api";
 import { formatLbs } from "../purchasing/format";
 import type { PoDetailFrom } from "../purchasing/poDetail";
@@ -155,19 +163,7 @@ function ReceiveForm({ po, locations, receive }: ReceiveFormProps) {
         })}
       </Stack>
 
-      <Paper
-        elevation={6}
-        sx={{
-          position: "sticky",
-          bottom: 16,
-          p: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 2,
-          alignItems: "center",
-          justifyContent: "flex-end",
-        }}
-      >
+      <ActionBar>
         {missing && <Typography color="text.secondary">{missing}</Typography>}
         <BigButton
           disabled={missing !== null}
@@ -178,7 +174,7 @@ function ReceiveForm({ po, locations, receive }: ReceiveFormProps) {
         >
           Review and receive
         </BigButton>
-      </Paper>
+      </ActionBar>
 
       {missing === null && (
         <ConfirmSummary
@@ -222,6 +218,9 @@ interface ReceiveLineCardProps {
 function ReceiveLineCard({ index, count, line, grade, cost, locations, onChange }: ReceiveLineCardProps) {
   // The scale weight is usually the PO weight, so the number pad stays tucked away until it's needed.
   const [changingWeight, setChangingWeight] = useState(false);
+  // Once a location is picked the list folds to one row, so a two-line PO isn't a long scroll of 7 locations each.
+  const [choosingLocation, setChoosingLocation] = useState(line.locationId === null);
+  const location = locations.find((l) => l.id === line.locationId) ?? null;
   const difference = line.weightLbs === null ? null : weightDifferenceText(line.orderedLbs, line.weightLbs);
 
   return (
@@ -243,13 +242,38 @@ function ReceiveLineCard({ index, count, line, grade, cost, locations, onChange 
             </Typography>
           </Box>
 
-          <PickList
-            label="Where are you putting it?"
-            options={locations.map((l) => ({ id: l.id, value: l.id, label: l.name }))}
-            value={line.locationId}
-            onChange={(locationId) => onChange({ locationId })}
-            emptyText="No locations are set up. Ask an admin to add them."
-          />
+          {choosingLocation || location === null ? (
+            <PickList
+              label="Where are you putting it?"
+              options={locations.map((l) => ({ id: l.id, value: l.id, label: l.name }))}
+              value={line.locationId}
+              onChange={(locationId) => {
+                onChange({ locationId });
+                setChoosingLocation(false);
+              }}
+              emptyText="No locations are set up. Ask an admin to add them."
+            />
+          ) : (
+            <Stack spacing={1}>
+              <Typography variant="h6" component="h2">
+                Where are you putting it?
+              </Typography>
+              <Paper
+                variant="outlined"
+                sx={{ px: 2, py: 1, display: "flex", alignItems: "center", gap: 1, minHeight: 64 }}
+              >
+                <Typography sx={{ flex: 1, fontSize: "1.25rem", fontWeight: 700 }}>{location.name}</Typography>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  onClick={() => setChoosingLocation(true)}
+                  aria-label={`Change location (${location.name})`}
+                >
+                  Change
+                </Button>
+              </Paper>
+            </Stack>
+          )}
 
           <Stack spacing={1.5}>
             <Typography variant="h6" component="h3">
@@ -302,46 +326,40 @@ interface ReceiptDoneProps {
 /** After posting: the tags to write on the material, and where each piece went. */
 function ReceiptDone({ receipt, onAnother, onHome }: ReceiptDoneProps) {
   return (
-    <Card variant="outlined" sx={{ maxWidth: 720, mx: "auto", borderWidth: 2, borderColor: "success.main" }}>
-      <CardContent sx={{ p: 4 }}>
-        <Stack spacing={3}>
-          <Stack spacing={1} sx={{ alignItems: "center", textAlign: "center" }}>
-            <CheckCircleIcon color="success" sx={{ fontSize: 72 }} />
-            <Typography variant="h2" component="h1">
-              PO #{receipt.purchaseOrderNumber} received
+    <SuccessCard
+      title={`PO #${receipt.purchaseOrderNumber} received`}
+      subtitle="Tag each piece with its number below."
+      actions={
+        <>
+          <BigButton onClick={onAnother}>Receive another PO</BigButton>
+          <BigButton variant="outlined" onClick={onHome}>
+            Home
+          </BigButton>
+        </>
+      }
+    >
+      <Paper variant="outlined" component="ul" sx={{ listStyle: "none", m: 0, p: 0 }}>
+        {receipt.items.map((item, i) => (
+          <Stack
+            component="li"
+            key={item.inventoryItemId}
+            direction="row"
+            spacing={3}
+            sx={{ alignItems: "center", px: 2.5, py: 2, borderTop: i > 0 ? 1 : 0, borderColor: "divider" }}
+          >
+            <Typography sx={{ fontSize: "2rem", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
+              {item.tag}
             </Typography>
-            <Typography color="text.secondary">Tag each piece with its number below.</Typography>
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography sx={{ fontSize: "1.2rem", fontWeight: 600 }}>{item.productName}</Typography>
+              <Typography color="text.secondary">
+                {formatLbs(item.weightLbs)} · {item.locationName}
+              </Typography>
+            </Box>
+            <MoneyText amount={item.totalCost} sx={{ fontSize: "1.1rem" }} />
           </Stack>
-          <Paper variant="outlined" component="ul" sx={{ listStyle: "none", m: 0, p: 0 }}>
-            {receipt.items.map((item, i) => (
-              <Stack
-                component="li"
-                key={item.inventoryItemId}
-                direction="row"
-                spacing={3}
-                sx={{ alignItems: "center", px: 2.5, py: 2, borderTop: i > 0 ? 1 : 0, borderColor: "divider" }}
-              >
-                <Typography sx={{ fontSize: "2rem", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-                  {item.tag}
-                </Typography>
-                <Box sx={{ flexGrow: 1 }}>
-                  <Typography sx={{ fontSize: "1.2rem", fontWeight: 600 }}>{item.productName}</Typography>
-                  <Typography color="text.secondary">
-                    {formatLbs(item.weightLbs)} · {item.locationName}
-                  </Typography>
-                </Box>
-                <MoneyText amount={item.totalCost} sx={{ fontSize: "1.1rem" }} />
-              </Stack>
-            ))}
-          </Paper>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ justifyContent: "center" }}>
-            <BigButton onClick={onAnother}>Receive another PO</BigButton>
-            <BigButton variant="outlined" onClick={onHome}>
-              Home
-            </BigButton>
-          </Stack>
-        </Stack>
-      </CardContent>
-    </Card>
+        ))}
+      </Paper>
+    </SuccessCard>
   );
 }

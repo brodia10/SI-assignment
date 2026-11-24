@@ -1,28 +1,18 @@
 import AddIcon from "@mui/icons-material/Add";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  IconButton,
-  Paper,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, Button, CircularProgress, IconButton, Paper, Stack, Typography } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
+  ActionBar,
   BigButton,
   ConfirmSummary,
   insertAt,
   MoneyText,
   PageHeader,
   PickList,
+  SuccessCard,
   UndoSnackbar,
   useLeaveGuard,
 } from "../../components";
@@ -208,19 +198,7 @@ export function NewPurchaseOrderPage() {
       </Stack>
 
       {/* The total and the next step stay in view while the list grows. */}
-      <Paper
-        elevation={6}
-        sx={{
-          position: "sticky",
-          bottom: 16,
-          p: 2,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 2,
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
+      <ActionBar>
         <Box>
           <Typography color="text.secondary">PO total</Typography>
           <MoneyText amount={total} sx={{ fontSize: "2rem", fontWeight: 700 }} />
@@ -238,7 +216,7 @@ export function NewPurchaseOrderPage() {
           </BigButton>
           {missing && <Typography color="text.secondary">{missing}</Typography>}
         </Stack>
-      </Paper>
+      </ActionBar>
 
       <UndoSnackbar
         removal={removed && { key: removed.line.key, message: `Removed ${removed.line.productName}` }}
@@ -299,29 +277,29 @@ interface PurchaseOrderCreatedProps {
 
 function PurchaseOrderCreated({ po, onReceive, onAnother, onDone }: PurchaseOrderCreatedProps) {
   return (
-    <Card variant="outlined" sx={{ maxWidth: 640, mx: "auto", borderWidth: 2, borderColor: "success.main" }}>
-      <CardContent sx={{ p: 4 }}>
-        <Stack spacing={2} sx={{ alignItems: "center", textAlign: "center" }}>
-          <CheckCircleIcon color="success" sx={{ fontSize: 72 }} />
-          <Typography variant="h2" component="h1">
-            PO #{po.number} created
-          </Typography>
-          <Typography sx={{ fontSize: "1.2rem" }}>
-            {po.vendorName} · {po.lines.length} {po.lines.length === 1 ? "product" : "products"} ·{" "}
-            {formatLbs(po.totalWeightLbs)} · <MoneyText amount={po.total} sx={{ fontWeight: 700 }} />
-          </Typography>
-          <Typography color="text.secondary">
-            When the material arrives, receive it to put it into inventory.
-          </Typography>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ pt: 1 }}>
-            <BigButton onClick={onReceive}>Receive it now</BigButton>
-            <BigButton variant="outlined" onClick={onAnother}>
-              Write another PO
-            </BigButton>
-          </Stack>
-          <Button onClick={onDone}>Back to purchase orders</Button>
-        </Stack>
-      </CardContent>
-    </Card>
+    <SuccessCard
+      title={`PO #${po.number} created`}
+      subtitle={
+        <>
+          {po.vendorName} · {po.lines.length} {po.lines.length === 1 ? "product" : "products"} ·{" "}
+          {formatLbs(po.totalWeightLbs)} · <MoneyText amount={po.total} sx={{ fontWeight: 700 }} />
+        </>
+      }
+      actions={
+        <>
+          <BigButton onClick={onReceive}>Receive it now</BigButton>
+          <BigButton variant="outlined" onClick={onAnother}>
+            Write another PO
+          </BigButton>
+          <Button size="large" onClick={onDone}>
+            Back to purchase orders
+          </Button>
+        </>
+      }
+    >
+      <Typography color="text.secondary" sx={{ textAlign: "center" }}>
+        When the material arrives, receive it to put it into inventory.
+      </Typography>
+    </SuccessCard>
   );
 }

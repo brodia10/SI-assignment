@@ -2,6 +2,7 @@ import { Alert, Box, Button, Paper, Stack, TextField, Typography } from "@mui/ma
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import {
+  ActionBar,
   BigButton,
   ConfirmSummary,
   formatMoney,
@@ -179,35 +180,26 @@ export function NewSalesOrder() {
         </Stack>
       </Stack>
 
-      <Paper
-        elevation={6}
-        sx={{ position: "sticky", bottom: 0, p: 2, mt: 2, borderRadius: 3, zIndex: (t) => t.zIndex.appBar - 1 }}
-      >
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={2}
-          sx={{ alignItems: { sm: "center" }, justifyContent: "space-between" }}
+      <ActionBar>
+        <Box>
+          <Typography sx={{ fontSize: "1.2rem", fontWeight: 700 }}>
+            {totals.itemCount === 0
+              ? "Nothing picked yet"
+              : `${totals.itemCount} ${totals.itemCount === 1 ? "item" : "items"} · ${formatLbs(totals.weightLbs)}` +
+                (totals.revenue === null ? "" : ` · ${formatMoney(totals.revenue)}`)}
+          </Typography>
+          {missing.length > 0 && <Typography color="text.secondary">{missing.join(" ")}</Typography>}
+        </Box>
+        <BigButton
+          disabled={missing.length > 0}
+          onClick={() => {
+            setNotice(null);
+            setConfirming(true);
+          }}
         >
-          <Box>
-            <Typography sx={{ fontSize: "1.2rem", fontWeight: 700 }}>
-              {totals.itemCount === 0
-                ? "Nothing picked yet"
-                : `${totals.itemCount} ${totals.itemCount === 1 ? "item" : "items"} · ${formatLbs(totals.weightLbs)}` +
-                  (totals.revenue === null ? "" : ` · ${formatMoney(totals.revenue)}`)}
-            </Typography>
-            {missing.length > 0 && <Typography color="text.secondary">{missing.join(" ")}</Typography>}
-          </Box>
-          <BigButton
-            disabled={missing.length > 0}
-            onClick={() => {
-              setNotice(null);
-              setConfirming(true);
-            }}
-          >
-            Review and ship
-          </BigButton>
-        </Stack>
-      </Paper>
+          Review and ship
+        </BigButton>
+      </ActionBar>
 
       {pricing && (
         <PriceDialog

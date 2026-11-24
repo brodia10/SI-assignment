@@ -61,6 +61,24 @@ export function canReview(outputs: readonly DraftOutput[], balance: WeightBalanc
   return outputs.length > 0 && outputs.length <= MAX_OUTPUTS && balance.state !== "over";
 }
 
+/**
+ * Why "Review and post" can't be tapped yet, for the bar next to it (like the PO, receiving and sales bars).
+ * Null when it can. `costsReady` and `canPost` come from the API's preview of the outputs on screen.
+ */
+export function whyNotReviewable(
+  outputs: readonly DraftOutput[],
+  balance: WeightBalance,
+  costsReady: boolean,
+  canPost: boolean,
+): string | null {
+  if (outputs.length === 0) return "Add what came off the line.";
+  if (balance.state === "over") return "The outputs weigh more than the input. Take one off or lower a weight.";
+  if (outputs.length > MAX_OUTPUTS) return `A work order can have up to ${MAX_OUTPUTS} outputs.`;
+  if (!costsReady) return "Working out the costs…";
+  if (!canPost) return "Fix the problem shown above first.";
+  return null;
+}
+
 const lbsFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 /** 40000 → "40,000 lbs", 1 → "1 lb", 9900.5 → "9,900.5 lbs". */
@@ -87,4 +105,29 @@ export function describeOutputs(
     ([productId, g]) => `${g.count} × ${productName(productId)} (${formatLbs(g.hundredths / 100)})`,
   );
   return parts.length <= 1 ? (parts[0] ?? "") : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
+}
+
+/**
+ * Where a new output most likely goes, so the purchaser usually doesn't have to pick: scrap into the scrap bin,
+ * anything else where the last good output went (four slit coils all go to Rack 4). Null when there's no good guess.
+ */
+export function suggestLocation(
+  isScrap: boolean,
+  locations: readonly { id: number; name: string; kind: string }[],
+  lastGoodLocationId: number | null,
+): number | null {
+  if (isScrap) {
+    const bins = locations.filter((l) => l.kind === "Bin");
+    return (bins.find((l) => /scrap/i.test(l.name)) ?? bins[0])?.id ?? null;
+  }
+  return locations.some((l) => l.id === lastGoodLocationId) ? lastGoodLocationId : null;
+}
+
+/** The location of the most recent output that isn't scrap, or null if there isn't one yet. */
+export function lastGoodLocation(
+  outputs: readonly Pick<DraftOutput, "productId" | "locationId">[],
+  isScrap: (productId: number) => boolean,
+): number | null {
+  for (let i = outputs.length - 1; i >= 0; i--) if (!isScrap(outputs[i].productId)) return outputs[i].locationId;
+  return null;
 }

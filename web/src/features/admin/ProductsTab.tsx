@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { BigButton } from "../../components";
 import { AdminList } from "./AdminList";
 import { useProducts } from "./adminApi";
-import { priceText } from "./adminText";
+import { pricesText } from "./adminText";
 
 export function ProductsTab() {
   const products = useProducts();
@@ -27,7 +27,7 @@ export function ProductsTab() {
         rows={products.data?.map((p) => ({
           id: p.id,
           primary: p.name,
-          secondary: `Buy ${priceText(p.defaultBuyPricePerLb)} · Sell ${priceText(p.defaultSellPricePerLb)}`,
+          secondary: pricesText(p.defaultBuyPricePerLb, p.defaultSellPricePerLb),
           chips: (
             <>
               {p.isScrap && <Chip color="secondary" variant="outlined" label="Scrap" />}
