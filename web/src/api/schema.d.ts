@@ -936,6 +936,10 @@ export interface components {
             /** Format: double */
             weightLbs: number | string;
             status: string;
+            /** Format: int32 */
+            soldOnNumber: null | number | string;
+            /** Format: int32 */
+            usedInWorkOrderNumber: null | number | string;
         };
         UpdateUserRequest: {
             role: string;

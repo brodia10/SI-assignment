@@ -6,7 +6,7 @@ import { useNavigate, useParams } from "react-router";
 import { formatMoney, MoneyText, PickList, perLb } from "../../components";
 import { QueryState } from "../sales/QueryState";
 import { formatLbs, formatPrice } from "../sales/salesOrderDraft";
-import { statusLabel } from "./reportFormat";
+import { currentPlace, statusLabel } from "./reportFormat";
 import { type ItemLineage, type LineageNode, useLineage, useTraceableItems } from "./reportsApi";
 
 const day = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
@@ -27,13 +27,18 @@ function PickItem() {
   return (
     <PickList
       label="Which item do you want to trace?"
-      options={items.data.map((i) => ({
-        id: i.id,
-        value: i.id,
-        label: `${i.tag} · ${i.productName}`,
-        secondary: `${formatLbs(i.weightLbs)} · ${i.locationName} · ${statusLabel(i.status)}`,
-        searchText: i.locationName,
-      }))}
+      options={items.data.map((i) => {
+        const place = currentPlace(i);
+        // Once an item has left the floor, the place already says so ("Shipped on SO #5001").
+        const status = i.status === "InStock" ? ` · ${statusLabel(i.status)}` : "";
+        return {
+          id: i.id,
+          value: i.id,
+          label: `${i.tag} · ${i.productName}`,
+          secondary: `${formatLbs(i.weightLbs)} · ${place}${status}`,
+          searchText: place,
+        };
+      })}
       value={null}
       onChange={(id) => navigate(`/reports/lineage/${id}`)}
       emptyText="No inventory yet."
@@ -93,6 +98,12 @@ function NodeCard({ node, highlightId }: { node: LineageNode; highlightId: numbe
   const highlighted = node.id === highlightId;
   const avg = perLb(node.totalCost, node.weightLbs);
   const wo = node.processedBy;
+  const place = currentPlace({
+    status: node.status,
+    locationName: node.locationName,
+    soldOnNumber: node.soldOn?.number,
+    usedInWorkOrderNumber: wo?.number,
+  });
 
   return (
     <Stack spacing={1.5}>
@@ -112,7 +123,7 @@ function NodeCard({ node, highlightId }: { node: LineageNode; highlightId: numbe
               {highlighted && <Chip label="This item" color="primary" size="small" sx={{ ml: 1 }} />}
             </Typography>
             <Typography color="text.secondary">
-              {formatLbs(node.weightLbs)} · {node.locationName} · cost <MoneyText amount={node.totalCost} />
+              {formatLbs(node.weightLbs)} · {place} · cost <MoneyText amount={node.totalCost} />
               {avg !== null && (
                 <>
                   {" "}

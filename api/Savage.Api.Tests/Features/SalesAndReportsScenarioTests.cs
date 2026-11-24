@@ -184,6 +184,45 @@ public class SalesAndReportsScenarioTests(SqlServerFixture sql)
     }
 
     [Fact]
+    public async Task Picked_items_say_which_order_took_them_once_they_left_the_floor()
+    {
+        await using var db = await sql.CreateMigratedContextAsync();
+        var s = await Scenario.ArrangeStepsOneToFourAsync(db);
+        await SalesOrderService.PostAsync(db, s.User.Id, s.SellTwoSlitCoils());
+        var workOrderNumber = await db.WorkOrders.Where(w => w.InputItemId == s.Coil.Id).Select(w => w.Number).SingleAsync();
+
+        var items = await ReportQueries.TraceableItemsAsync(db);
+
+        var sold = items.Single(i => i.Tag == "C-1003");
+        Assert.Equal(5001, sold.SoldOnNumber);
+        Assert.Null(sold.UsedInWorkOrderNumber);
+
+        var consumed = items.Single(i => i.Tag == "C-1001");
+        Assert.Equal(workOrderNumber, consumed.UsedInWorkOrderNumber);
+        Assert.Null(consumed.SoldOnNumber);
+
+        var inStock = items.Single(i => i.Tag == "C-1005");
+        Assert.Null(inStock.SoldOnNumber);
+        Assert.Null(inStock.UsedInWorkOrderNumber);
+    }
+
+    [Fact]
+    public async Task Voided_orders_dont_count_as_where_an_item_went()
+    {
+        await using var db = await sql.CreateMigratedContextAsync();
+        var s = await Scenario.ArrangeStepsOneToFourAsync(db);
+        await SalesOrderService.PostAsync(db, s.User.Id, s.SellTwoSlitCoils());
+        // No void screen exists yet, so void both orders directly.
+        await db.SalesOrders.ExecuteUpdateAsync(o => o.SetProperty(x => x.Status, SalesOrderStatus.Voided));
+        await db.WorkOrders.ExecuteUpdateAsync(w => w.SetProperty(x => x.Status, WorkOrderStatus.Voided));
+
+        var items = await ReportQueries.TraceableItemsAsync(db);
+
+        Assert.Null(items.Single(i => i.Tag == "C-1003").SoldOnNumber);
+        Assert.Null(items.Single(i => i.Tag == "C-1001").UsedInWorkOrderNumber);
+    }
+
+    [Fact]
     public async Task Selling_an_item_that_was_already_sold_is_a_conflict_and_changes_nothing()
     {
         await using var db = await sql.CreateMigratedContextAsync();
