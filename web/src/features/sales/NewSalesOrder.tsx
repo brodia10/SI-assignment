@@ -1,7 +1,15 @@
 import { Alert, Box, Button, Paper, Stack, TextField, Typography } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
-import { BigButton, ConfirmSummary, formatMoney, MoneyText, PageHeader, PickList } from "../../components";
+import {
+  BigButton,
+  ConfirmSummary,
+  formatMoney,
+  MoneyText,
+  PageHeader,
+  PickList,
+  useLeaveGuard,
+} from "../../components";
 import { ApiError, errorText } from "./apiResult";
 import { ItemChecklist } from "./ItemChecklist";
 import { PriceDialog } from "./PriceDialog";
@@ -41,6 +49,8 @@ export function NewSalesOrder() {
    * off this draft; without this the dialog could read "Ship 0 items" for a moment before the screen moves on.
    */
   const [frozen, setFrozen] = useState<ShipConfirmation | null>(null);
+  // Not once "Ship it" is tapped: a successful post navigates straight to the order.
+  useLeaveGuard(draft.itemIds.length > 0 && !frozen, "sales order");
 
   // If the list refreshes (e.g. after "someone else just sold that coil"), take sold items off this order.
   useEffect(() => {

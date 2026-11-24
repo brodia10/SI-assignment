@@ -15,7 +15,16 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
-import { BigButton, ConfirmSummary, formatMoney, MoneyText, PageHeader, perLb } from "../../components";
+import {
+  BigButton,
+  ConfirmSummary,
+  formatMoney,
+  insertAt,
+  MoneyText,
+  PageHeader,
+  perLb,
+  UndoSnackbar,
+} from "../../components";
 import { AddOutputDialog } from "./AddOutputDialog";
 import {
   type InputOption,
@@ -64,6 +73,7 @@ export function OutputsStep({
 }: OutputsStepProps) {
   const [adding, setAdding] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [removed, setRemoved] = useState<{ output: DraftOutput; index: number } | null>(null);
   const balance = weightBalance(input.weightLbs, outputs);
   const productsById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const locationsById = useMemo(() => new Map(locations.map((l) => [l.id, l])), [locations]);
@@ -89,6 +99,17 @@ export function OutputsStep({
   }, [previewError, onInputGone]);
 
   const reviewable = canReview(outputs, balance) && fresh?.canPost === true;
+
+  function remove(output: DraftOutput) {
+    setRemoved({ output, index: outputs.findIndex((o) => o.key === output.key) });
+    onOutputsChange(removeOutput(outputs, output.key));
+  }
+
+  function undoRemove() {
+    if (!removed) return;
+    onOutputsChange(insertAt(outputs, removed.output, removed.index));
+    setRemoved(null);
+  }
 
   function confirm() {
     post.mutate(request, {
@@ -134,7 +155,7 @@ export function OutputsStep({
                     <IconButton
                       edge="end"
                       aria-label={`Remove ${productName(o.productId)}, ${formatLbs(o.weightLbs)}`}
-                      onClick={() => onOutputsChange(removeOutput(outputs, o.key))}
+                      onClick={() => remove(o)}
                     >
                       <DeleteOutlinedIcon fontSize="large" />
                     </IconButton>
@@ -193,7 +214,13 @@ export function OutputsStep({
         >
           Add output
         </BigButton>
-        <BigButton onClick={() => setConfirming(true)} disabled={!reviewable}>
+        <BigButton
+          onClick={() => {
+            setRemoved(null); // the undo bar would sit on top of the confirmation
+            setConfirming(true);
+          }}
+          disabled={!reviewable}
+        >
           Review and post
         </BigButton>
       </Stack>
@@ -236,6 +263,17 @@ export function OutputsStep({
           onCancel={cancelConfirm}
         />
       )}
+
+      <UndoSnackbar
+        removal={
+          removed && {
+            key: removed.output.key,
+            message: `Removed ${productName(removed.output.productId)}, ${formatLbs(removed.output.weightLbs)}`,
+          }
+        }
+        onUndo={undoRemove}
+        onClose={() => setRemoved(null)}
+      />
     </Stack>
   );
 }

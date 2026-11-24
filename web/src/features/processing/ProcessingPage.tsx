@@ -1,5 +1,6 @@
 import { Alert, Button, CircularProgress, Stack } from "@mui/material";
 import { useCallback, useState } from "react";
+import { useLeaveGuard } from "../../components";
 import { type InputOption, type PostedWorkOrder, useRefreshWorkOrderOptions, useWorkOrderOptions } from "./api";
 import { OutputsStep } from "./OutputsStep";
 import { PickInputStep } from "./PickInputStep";
@@ -21,6 +22,7 @@ export function ProcessingPage() {
   const [outputs, setOutputs] = useState<DraftOutput[]>([]);
   const [posted, setPosted] = useState<PostedWorkOrder | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  useLeaveGuard(!posted && outputs.length > 0, "work order");
 
   const onInputGone = useCallback(
     (message: string) => {

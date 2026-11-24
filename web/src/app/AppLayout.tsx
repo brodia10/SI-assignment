@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { Link, NavLink, Outlet } from "react-router";
+import { useConfirmLeave } from "../components";
 import { laneIcons } from "./laneIcons";
 import type { Lane } from "./navigation";
 
@@ -37,6 +38,8 @@ export function AppLayout({ lanes, email, role, onSignOut }: AppLayoutProps) {
   const theme = useTheme();
   const permanent = useMediaQuery(theme.breakpoints.up(1024));
   const [open, setOpen] = useState(false);
+  // Signing out drops whatever draft is open, so it asks first, like leaving the screen does.
+  const confirmLeave = useConfirmLeave();
 
   const nav = (
     <List component="nav" aria-label="Main" sx={{ px: 1, py: 2 }}>
@@ -99,7 +102,7 @@ export function AppLayout({ lanes, email, role, onSignOut }: AppLayoutProps) {
             <Typography sx={{ fontSize: "1rem", lineHeight: 1.2 }}>{email}</Typography>
             <Typography sx={{ fontSize: "0.875rem", opacity: 0.8, lineHeight: 1.2 }}>{role}</Typography>
           </Box>
-          <Button color="inherit" startIcon={<LogoutIcon />} onClick={onSignOut}>
+          <Button color="inherit" startIcon={<LogoutIcon />} onClick={() => confirmLeave(onSignOut, "Sign out")}>
             Sign out
           </Button>
         </Toolbar>
