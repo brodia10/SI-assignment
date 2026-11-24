@@ -126,7 +126,36 @@ client.
     - **Previews call the production API.** CORS allows this project's preview hostnames
       (`si-assignment--*.web.app`) by pattern, not every `*.web.app` site.
 
-## Open questions / assumptions
+## Phase 7 — Build the features in parallel
 
-_(Filled in during the interview. Each item is either an assumption to document in the README or
-a question worth sending to Savage.)_
+16. **Shared pieces first, then four lanes at once.** The data model and its single migration, the
+    `CostAllocator` with its tests, and the app shell (theme, role-based navigation, shared touch
+    components) were merged first. Then four worktrees ran side by side: admin, purchasing and
+    receiving, processing, and sales and reports. Lanes weren't allowed to change the schema or the
+    shared files, so they merged in order (A → B → C → D) with only the generated API types to refresh.
+17. **The scenario test was the finish line.** It asserts every number in the assignment against a
+    real SQL Server, so "done" meant that test passing, not just screens that looked right.
+
+## Phase 8 — Walk the scenario on an iPad, then fix what it found
+
+18. **Tests passing isn't the same as easy to use.** I walked the whole scenario on the live app at
+    iPad size, in both orientations, as the purchaser and as the admin, and logged every rough spot
+    as its own issue under one tracker (#31). Examples: the first tap on a pre-filled number pad
+    added digits instead of replacing them, the sales confirmation briefly showed "Ship 0 items",
+    and the trace screen showed a sold coil as still sitting in a rack.
+19. **Fixes were grouped by the files they touch,** so PRs that could run in parallel did, and the
+    broad polish pass went last, after everything it would touch had landed.
+20. **Sample data is the scenario, run through the real code.** The submission asks for sample data
+    for the example scenario. Instead of inserting rows by hand, `seed-scenario` runs the PO,
+    receipt, work order and sale through the same handlers the screens use, so the data is exactly
+    what the app would produce. Its test is the first one that runs the whole scenario end to end.
+    It checks the setup data before writing anything, because posted records can't be voided yet.
+21. **Cleaned the live database before submitting, carefully.** My QA walkthrough had left the
+    scenario in prod with every number right, plus test records next to it (a sale at $800/lb, a
+    made-up supplier, a "test product") that would have thrown off the report totals. I took a manual
+    RDS snapshot, dry-ran the cleanup with a rollback, and ran it as one transaction that checks the
+    counts at the end and rolls back if they aren't exactly what the scenario leaves. The dry runs
+    caught two mistakes in my script before it touched anything.
+22. **The README is written for the reviewer.** It starts with the live link, sign-ins and the
+    scenario as a checklist with the expected numbers, then what I built, what I skipped and why,
+    and the data model.

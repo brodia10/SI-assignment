@@ -1,6 +1,154 @@
 # Savage Innovations: Metal Processing App
 
-_Work in progress._
+An iPad-first inventory app for a metal processor. A purchaser writes purchase orders at the
+supplier, receives the material into bays and racks, runs work orders that turn one coil into
+many, and ships sales orders by container. An admin manages products, prices and users, and
+sees inventory and margin reports. Every item can be traced from its PO, through work orders,
+to the sales order it shipped on.
+
+## For reviewers
+
+**Live app:** https://si-assignment.web.app (best on an iPad, or a desktop browser at iPad size)
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@example.com` | `SteelCoil-Admin-2201` |
+| Purchaser | `purchaser@example.com` | `SteelCoil-Buyer-2201` |
+
+These are demo-only accounts.
+
+**The example scenario is already loaded as sample data.** Sign in as the admin and open
+**Reports** to see it straight away: SO #5001 cost $8,400.00, sold for $10,890.00, profit
+$2,490.00, margin 22.9%. Inventory is the aluminum in Rack 1, two slit coils in Rack 4 and the scrap.
+**Trace an item** follows C-1003 back to PO #2201 and forward to SO #5001. The products, prices,
+locations, supplier and customer are seeded too.
+
+To walk the scenario yourself, follow the steps below. Because #2201 and #5001 already exist,
+your run gets the next numbers (PO #2202, tag C-1008, WO #1002, SO #5002) with the same amounts.
+On a fresh database (see [Setup](#setup)), `seed-scenario` or a manual run produces exactly
+#2201, C-1001, WO #1001 and SO #5001.
+
+### Walk the example scenario
+
+| Step | Sign in as | Where | What you should see |
+|---|---|---|---|
+| 1. Products and prices; invite a purchaser | Admin | **Admin → Products & prices**, **Admin → Users** | The four scenario products at $0.42, $1.35, $0.55 and $0.15/lb. Inviting a user gives you a set-password link to pass on. |
+| 2. Write the PO (#2201 in the sample data) | Purchaser | **Purchasing → New PO** | Pick Great Lakes Steel Supply, add 40,000 lbs Hot-Rolled Steel Coil (prices fill in from the product) and 5,000 lbs Aluminum Sheet. **PO total $23,550.00.** |
+| 3. Receive | Purchaser | **Receiving** | Pick your PO. The coil goes into Bay 2 and gets the next tag (**C-1001** in the sample data). The aluminum goes into Rack 1. |
+| 4. Work order | Purchaser | **Processing** | Input the steel coil you just received. Outputs: four 9,900 lb 12" Slit Coils into Rack 4, and 400 lbs of Steel Scrap into the Scrap Bin. Each slit coil carries **$4,200.00** (about $0.424/lb), and the scrap carries $0. |
+| 5. Ship the sales order (#5001 in the sample data) | Purchaser | **Sales → New sales order** | Pick Buckeye Fabrication and two slit coils at $0.55/lb. **19,800 lbs, $10,890.00.** |
+| 6. Reports | Admin | **Reports** | **Inventory** by product and location. **Sales & margin**: your sales order cost **$8,400.00**, sold for **$10,890.00**, profit **$2,490.00**, margin **22.9%**. **Trace an item**: pick one of the coils you sold to follow it back through the work order and receipt to the PO, and forward to the sales order. |
+
+Every post (PO, receipt, work order, sale) shows a plain-English confirmation first, and posted
+records are locked after that. Leaving a half-written PO, work order or sales order asks first,
+and a removed line can be undone.
+
+**Where to look in the code:** the whole scenario runs through the real handlers in
+[`ScenarioSeederTests.cs`](api/Savage.Api.Tests/Data/ScenarioSeederTests.cs), which checks every
+number in the assignment from the reports. The money rules are in
+[`Domain/CostAllocator.cs`](api/Savage.Api/Domain/CostAllocator.cs) and
+[`Features/Reports/ProfitMath.cs`](api/Savage.Api/Features/Reports/ProfitMath.cs). The reports and
+the item trace are tested against a real SQL Server in
+[`SalesAndReportsScenarioTests.cs`](api/Savage.Api.Tests/Features/SalesAndReportsScenarioTests.cs).
+
+## What I built, and what I skipped
+
+**Built:** everything in the requirements' core list, for both roles:
+
+- **Purchasing:** POs with product pick lists, prices pre-filled from the product (editable), live
+  line and PO totals, and quick-add for a new supplier. Lines can be changed or removed (with Undo)
+  until you tap Create PO. Any PO opens to show what each line became: its tag, location, and
+  whether it's in stock, processed or sold.
+- **Receiving:** pick a PO, then pick a location for each line (the list folds once picked). The
+  weight starts as the PO weight and can be changed to what the scale shows, with a warning if they
+  differ. Each line becomes a tagged inventory item. "Recently received" brings a receipt's tags
+  back after the fact.
+- **Processing:** pick one item in, add many items out. A live balance bar shows the input weight
+  against the outputs. Outputs heavier than the input are blocked, and lighter ones get a yield-loss
+  warning. Cost is split automatically. The location is suggested: the Scrap Bin for scrap,
+  otherwise wherever the last output went.
+- **Sales:** pick a customer and in-stock items, enter the container number, and ship. The purchaser
+  sees revenue but not cost.
+- **Reports (admin):** inventory by product and location, sales with cost, profit and margin per
+  order, and an item trace.
+- **Admin:** products and prices, locations, vendors, and users (invite, change role, turn off).
+  Roles are checked by the API on every request, not just hidden in the UI.
+- **iPad design:** 48px+ touch targets, number pads instead of keyboards for weights and prices,
+  pick lists instead of typing, the main action in the same bottom bar on every form, a
+  plain-English confirmation before anything is posted, and the same success screen after.
+  Leaving a half-written PO, work order or sales order asks first (in-app navigation, the back
+  swipe and Sign out; Safari on iPad doesn't allow a prompt on reload).
+- **Sample data:** the live app has the example scenario loaded (I ran it through the app's screens).
+  For any other database, `seed-scenario` loads it through the same code the screens use, after
+  checking that the setup data is as seeded.
+- **Delivery:** CI on every PR (lint, typecheck, about 400 tests), preview deploys, and auto-deploy
+  on merge (API to AWS Lambda, web to Firebase Hosting).
+
+**Skipped, on purpose:**
+
+| Skipped | Why |
+|---|---|
+| **Voids** (correcting a posted record) | The data model is ready for them: every document (PO, work order, sales order) records who voided it, when and why, and items have a `Voided` status. The screen and the "only if nothing downstream used it" check weren't needed for the scenario, so they're first on the next list. Until then a mistake needs a database fix. |
+| **Partial receiving** | The scenario receives a whole PO at once. Partial deliveries add a "received so far" state to every line, which is worth asking the client about first. |
+| **Selling part of an item** | Items are sold whole (one of my client questions). Splitting an item for sale can already be done with a work order. |
+| **Photos, QR labels, offline** | The requirements list them as optional extras, to do only once the core is done. I spent that time on the iPad walkthrough and fixing what it found instead. |
+| **Editing an Open PO** | A PO is checked on a confirmation screen before it's created. Changing it afterwards, before it's received, would come with voids. |
+| **Single sign-on** | It depends on which accounts the client's users already have (see Sign-in below). |
+
+## Data model
+
+Each physical piece of metal is one `InventoryItem` with a floor tag. Every item has exactly
+one source, a PO line or a work order, so following the links back from any item always ends
+at a PO.
+
+```
+Vendor (supplier)
+  └─ PurchaseOrder #2201 ─┬─ PurchaseOrderLine: Hot-Rolled Steel Coil, 40,000 lbs @ $0.42
+                          └─ PurchaseOrderLine: Aluminum Sheet, 5,000 lbs @ $1.35
+                                       → InventoryItem C-1002 (Rack 1, $6,750, InStock)
+                                 │ steel coil line received as
+                                 ▼
+                          InventoryItem C-1001 (Bay 2, 40,000 lbs, TotalCost $16,800, Consumed)
+                                 │ input of
+                                 ▼
+                          WorkOrder #1001 ── outputs (SourceWorkOrderId = #1001):
+                                 C-1003 … C-1006  12" Slit Coil, 9,900 lbs, $4,200 each (Rack 4)
+                                 C-1007           Steel Scrap, 400 lbs, $0 (Scrap Bin)
+                                 │ C-1003, C-1004 sold on
+                                 ▼
+Vendor (customer)
+  └─ SalesOrder #5001 ── SalesOrderLine per item: lbs, $/lb, Revenue, Cost (copied at posting)
+```
+
+- **Cost is stored as `TotalCost` on the item**, never as a rounded $/lb, so the report adds up
+  to exactly $8,400.00. $/lb is only calculated for display.
+- **Status** (`InStock`, `Consumed`, `Sold`) is what stops an item from being used twice. Posting
+  checks it inside a transaction, and a row version catches two iPads racing for the same coil.
+- **A sales line copies its cost and revenue at posting**, so the margin report reads stored
+  numbers instead of recalculating them.
+- **Document numbers and tags come from SQL Server sequences** that start at 2201, 1001 and 5001,
+  so the demo produces the scenario's numbers.
+- **Every document records who created it and when** (`AuditedDocument`), plus the void fields above.
+
+## Code layout
+
+```
+api/Savage.Api/
+  Domain/      entities + pure business rules (CostAllocator), no database code
+  Features/    one folder per feature: Purchasing, Receiving, Processing, Sales, Reports, Users, …
+               endpoints, plus services and rules in small testable classes where there's logic
+  Data/        DbContext, EF configurations, migrations, seed data (ReferenceData)
+api/Savage.Api.Tests/   xUnit: unit tests for every money rule, plus SQL Server tests (Testcontainers)
+web/src/
+  features/    one folder per screen group (admin covers products, locations, vendors and users)
+  components/  shared touch UI: BigButton, PickList, WeightInput (number pad), ConfirmSummary, MoneyText
+  api/         TypeScript types generated from the API's OpenAPI document, so the two can't drift
+```
+
+Each feature is a vertical slice: a change to sales touches `Features/Sales/` and
+`features/sales/` and little else. Every rule that affects money is in a plain function or class
+with its own unit tests (`CostAllocator`, `ProfitMath`, `PurchaseOrderMath`, `SalesOrderRules`,
+`WorkOrderPlanner`).
 
 ## How I approached this
 
@@ -21,7 +169,7 @@ I start with the business, not the technology. My process:
      numbers. I emailed these to Joe English with my working assumption for each, so I wasn't
      blocked waiting on a reply.
 
-A detailed, dated record is in [docs/process-log.md](docs/process-log.md).
+A running record is in [docs/process-log.md](docs/process-log.md).
 
 ## Questions asked of the client
 
@@ -50,10 +198,12 @@ handle mistakes and followed them:
 - **Prevent first.** Pick lists, prices and weights filled in from what's already known, live totals,
   and a plain-language confirmation screen before anything is saved ("Receive 40,000 lbs
   Hot-Rolled Steel Coil into Bay 2?").
-- **Records are draft until posted, then locked.** A PO can be edited until it's received. A receipt,
+- **Records are draft until posted, then locked.** A PO's lines can be changed until it's created
+  (editing an Open PO afterwards isn't built yet). A receipt,
   a completed work order, or a shipped sales order is never edited or deleted. This is standard
   ERP practice because it keeps costs and the audit trail correct.
-- **Corrections are voids, not edits.** A mistake is fixed by voiding the transaction, which
+- **Corrections are voids, not edits** (designed into the data model, not built yet; see
+  "What I skipped"). A mistake is fixed by voiding the transaction, which
   reverses its inventory effect and records who did it, when, and why. Then you redo it.
   A void is allowed only if nothing later has used the result (e.g., you can't void a
   work order if one of its slit coils has already shipped). That rule is how mainstream ERPs
@@ -68,7 +218,7 @@ handle mistakes and followed them:
   than the input (you can't create metal) and **warns** if they weigh less (yield loss).
 - **Receiving is all or nothing.** A PO is received in one step, with every line at once. Partial
   deliveries aren't supported yet.
-- **Every record stores who created it and when.**
+- **Every document (PO, work order, sales order) stores who created it and when.**
 
 ### Hosting
 
@@ -105,15 +255,6 @@ handle mistakes and followed them:
   and admin sees and manages the full vendor list.
 
 ## Setup
-
-### Demo sign-ins
-
-These work on the [live app](https://si-assignment.web.app) and locally. They're demo accounts only.
-
-| Role | Email | Password |
-|---|---|---|
-| Admin | `admin@example.com` | `SteelCoil-Admin-2201` |
-| Purchaser | `purchaser@example.com` | `SteelCoil-Buyer-2201` |
 
 ### Run it locally
 
@@ -162,7 +303,7 @@ pnpm dev:api   # http://localhost:5080 (health check: /health, OpenAPI: /openapi
 pnpm dev:web   # http://localhost:5173
 ```
 
-Open http://localhost:5173 and sign in with a demo account above.
+Open http://localhost:5173 and sign in with a demo account from [For reviewers](#for-reviewers).
 
 - SQL Server takes about 10–20 seconds to start. If step 4 can't connect, wait and run it again.
 - If port 1433 is already in use, map another one (`-p 14330:1433`) and use `localhost,14330` in
@@ -273,8 +414,8 @@ the Firebase service account from the file named by `Firebase:CredentialsPath` (
   "Lint, typecheck, test" check. `firebase init hosting:github` for the Firebase service account
   secret.
 - **Firebase:** email/password sign-in is on. Self sign-up and account deletion are turned off,
-  because the app is invite-only. Users are created through the Admin SDK (the seeder now, the
-  admin's invite screen later).
+  because the app is invite-only. Users are created through the Admin SDK (the seeder for the demo accounts, and
+  Admin → Users → Invite someone for everyone else).
 - **Lambda env vars:** `ConnectionStrings__Default` (RDS) and `Firebase__CredentialsJson`
   (the service account the Admin SDK uses to invite users). Non-secret settings (Firebase
   project ID, CORS origins) are in `appsettings.json`.
@@ -286,12 +427,46 @@ the Firebase service account from the file named by `Firebase:CredentialsPath` (
 
 ## How I used AI tools
 
-- **Claude Code as a requirements interviewer.** Before writing any code, I had it read the
-  assignment and interview me to find gaps and ambiguities, the way a client discovery
-  session would. I told it not to build anything during this phase.
+I used **Claude Code** for most of the work, but as a team I directed rather than as an autopilot.
+The decisions in this README are mine. Claude did a lot of the typing and much of the checking.
+
+- **Requirements interviewer.** Before any code, I had it read the assignment and interview me to
+  find gaps and ambiguities, the way a client discovery session would. I told it not to build
+  anything during this phase. That produced the [glossary](docs/domain-glossary.md), the three
+  client questions, and the assumptions above.
+- **Planning before building.** I wrote [the plan](docs/plan.md) with it: walking skeleton first,
+  the scenario as an automated test that defines "done", then shared pieces, then parallel features.
+  Every task became a GitHub issue with a "done when" checklist.
+- **Parallel sessions in git worktrees.** Each task got its own worktree, branch, Claude Code
+  session and PR. Once the schema, routes and shared components were in place, four feature lanes
+  (admin, purchasing and receiving, processing, sales and reports) were built side by side, each
+  staying in its own folders so they didn't conflict.
+- **Guardrails, so the AI can't call broken work done.** The repo's [`.claude/`](.claude) folder has
+  hooks that lint every edited file and block a session from finishing while the typecheck or tests
+  fail, a `/feature` skill that explores and plans and then waits for my approval before building,
+  and a `code-reviewer` agent that reviews each diff with fresh eyes before the PR. CI runs the same
+  checks again, and `main` won't merge a red PR.
+- **Review caught real mistakes, including the AI's.** For example, the reviewer flagged that I'd
+  described the deploy role as unable to see secrets. That was wrong, because anything that can
+  deploy code can read the function's env vars, so I corrected the README and the reasoning.
+- **QA on the real thing.** I walked the scenario on the live app at iPad size as both roles and
+  logged each problem as its own issue (number pads, confirm dialogs, trace statuses, PO detail,
+  draft protection, polish), then fixed them in separate PRs.
+
+**What I checked myself:** every number in the scenario, the cost-allocation and margin rules
+(each has a unit test I read line by line), the data model, the security trade-offs, and every
+PR before merging it. The commit history and PR descriptions show the steps.
 
 ## What I'd build next
 
-1. **Single sign-on with the account the client's users already have** (Microsoft or Google via
+1. **Voids**, so a posted mistake is corrected in the app, only when nothing downstream used it.
+   The data model already has the fields.
+2. **Single sign-on with the account the client's users already have** (Microsoft or Google via
    Firebase), so there are no passwords to forget and fewer password-related security risks.
-2. _More to come._
+3. **QR labels** for items and locations, so receiving and picking are a scan instead of a pick list.
+4. **Partial receiving**, and selling part of an item, if the client confirms they need them.
+5. **Works on a weak connection:** queue posts offline and send them when the iPad reconnects.
+6. **Photos of graded material** on the PO.
+7. **Production hardening:** move to Azure App Service + Azure SQL for a Microsoft shop, keep the
+   database on a private network, validate its certificate, move secrets to a secrets manager, and
+   run migrations from the pipeline behind an approval.
