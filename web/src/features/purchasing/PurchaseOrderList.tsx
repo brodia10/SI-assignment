@@ -2,7 +2,7 @@ import AddIcon from "@mui/icons-material/Add";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { Alert, Box, Button, ButtonBase, Chip, CircularProgress, Paper, Stack, Typography } from "@mui/material";
 import { Link, useNavigate } from "react-router";
-import { BigButton, MoneyText, PageHeader } from "../../components";
+import { BigButton, EmptyState, MoneyText, PageHeader } from "../../components";
 import { usePurchaseOrders } from "./api";
 import { formatLbs, purchaseOrderStatusChip } from "./format";
 import type { PoDetailFrom } from "./poDetail";
@@ -33,9 +33,7 @@ export function PurchaseOrderList() {
           {orders.error.message}
         </Alert>
       ) : orders.data.length === 0 ? (
-        <Paper variant="outlined" sx={{ p: 3 }}>
-          <Typography color="text.secondary">No purchase orders yet. Tap “New PO” to write the first one.</Typography>
-        </Paper>
+        <EmptyState>No purchase orders yet. Tap “New PO” to write the first one.</EmptyState>
       ) : (
         <Paper variant="outlined" component="ul" sx={{ listStyle: "none", m: 0, p: 0 }}>
           {orders.data.map((po, i) => {

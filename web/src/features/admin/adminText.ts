@@ -25,6 +25,19 @@ export function priceText(price: number | string | null | undefined): string {
   return n === null ? "No price" : formatPerLb(n);
 }
 
+/** A product's prices for the list: "Buy $0.42/lb", "Sell $0.55/lb", both, or "No prices yet". Missing ones are left out. */
+export function pricesText(
+  buyPrice: number | string | null | undefined,
+  sellPrice: number | string | null | undefined,
+): string {
+  const buy = num(buyPrice);
+  const sell = num(sellPrice);
+  const parts = [buy !== null && `Buy ${formatPerLb(buy)}`, sell !== null && `Sell ${formatPerLb(sell)}`].filter(
+    Boolean,
+  );
+  return parts.length > 0 ? parts.join(" · ") : "No prices yet";
+}
+
 export function activeText(isActive: boolean): string {
   return isActive ? "Active" : "Turned off";
 }

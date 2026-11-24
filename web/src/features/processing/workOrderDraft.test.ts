@@ -5,10 +5,13 @@ import {
   type DraftOutput,
   describeOutputs,
   formatLbs,
+  lastGoodLocation,
   MAX_OUTPUTS,
   removeOutput,
   roomForOutputs,
+  suggestLocation,
   weightBalance,
+  whyNotReviewable,
 } from "./workOrderDraft";
 
 const SLIT = 3;
@@ -117,5 +120,83 @@ describe("formatLbs", () => {
     expect(formatLbs(40_000)).toBe("40,000 lbs");
     expect(formatLbs(9_900.5)).toBe("9,900.5 lbs");
     expect(formatLbs(0.25)).toBe("0.25 lbs");
+  });
+});
+
+describe("suggestLocation", () => {
+  const locations = [
+    { id: 1, name: "Bay 2", kind: "Bay" },
+    { id: 6, name: "Rack 4", kind: "Rack" },
+    { id: 8, name: "Bin A", kind: "Bin" },
+    { id: 7, name: "Scrap Bin", kind: "Bin" },
+  ];
+
+  it("sends scrap to the scrap bin", () => {
+    expect(suggestLocation(true, locations, 6)).toBe(7);
+  });
+
+  it("falls back to any bin for scrap when none is called scrap", () => {
+    expect(
+      suggestLocation(
+        true,
+        locations.filter((l) => l.id !== 7),
+        null,
+      ),
+    ).toBe(8);
+  });
+
+  it("puts a good output where the last good one went", () => {
+    expect(suggestLocation(false, locations, 6)).toBe(6);
+  });
+
+  it("has no guess for the first good output, or if that location was turned off", () => {
+    expect(suggestLocation(false, locations, null)).toBeNull();
+    expect(suggestLocation(false, locations, 99)).toBeNull();
+  });
+});
+
+describe("lastGoodLocation", () => {
+  const isScrap = (productId: number) => productId === 4;
+
+  it("skips scrap outputs", () => {
+    expect(
+      lastGoodLocation(
+        [
+          { productId: 3, locationId: 6 },
+          { productId: 4, locationId: 7 },
+        ],
+        isScrap,
+      ),
+    ).toBe(6);
+  });
+
+  it("is null before any good output", () => {
+    expect(lastGoodLocation([{ productId: 4, locationId: 7 }], isScrap)).toBeNull();
+    expect(lastGoodLocation([], isScrap)).toBeNull();
+  });
+});
+
+describe("whyNotReviewable", () => {
+  const out = (weightLbs: number): DraftOutput => ({ key: weightLbs, productId: 3, weightLbs, locationId: 6 });
+
+  it("asks for outputs first", () => {
+    expect(whyNotReviewable([], weightBalance(40_000, []), false, false)).toBe("Add what came off the line.");
+  });
+
+  it("explains outputs heavier than the input", () => {
+    const outputs = [out(40_001)];
+    expect(whyNotReviewable(outputs, weightBalance(40_000, outputs), true, false)).toMatch(/weigh more than the input/);
+  });
+
+  it("waits for the cost preview, then points at the API's problem", () => {
+    const outputs = [out(9_900)];
+    const balance = weightBalance(40_000, outputs);
+    expect(whyNotReviewable(outputs, balance, false, false)).toBe("Working out the costs…");
+    expect(whyNotReviewable(outputs, balance, true, false)).toBe("Fix the problem shown above first.");
+  });
+
+  it("is null when the work order can be reviewed", () => {
+    const outputs = [out(9_900)];
+    expect(whyNotReviewable(outputs, weightBalance(40_000, outputs), true, true)).toBeNull();
   });
 });

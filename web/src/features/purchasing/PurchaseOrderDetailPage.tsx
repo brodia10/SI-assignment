@@ -4,7 +4,7 @@ import { Alert, Box, Button, Chip, CircularProgress, Paper, Stack, Typography } 
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { canAccess, toRole } from "../../app/navigation";
 import { useAuth } from "../../auth/AuthProvider";
-import { BigButton, MoneyText, PageHeader } from "../../components";
+import { ActionBar, BigButton, MoneyText, PageHeader } from "../../components";
 import { type PurchaseOrder, type PurchaseOrderLine, type ReceivedLineItem, usePurchaseOrder } from "./api";
 import { formatBuyPrice, formatLbs, purchaseOrderStatusChip } from "./format";
 import { backTarget, receivedItemStatus, receivedItemText } from "./poDetail";
@@ -108,12 +108,9 @@ function Detail({ po, canTrace }: { po: PurchaseOrder; canTrace: boolean }) {
       </Paper>
 
       {isOpen && (
-        <Paper
-          elevation={6}
-          sx={{ position: "sticky", bottom: 16, mt: 3, p: 2, display: "flex", justifyContent: "flex-end" }}
-        >
+        <ActionBar>
           <BigButton onClick={() => navigate(`/receiving/${po.id}`)}>Receive it now</BigButton>
-        </Paper>
+        </ActionBar>
       )}
     </>
   );

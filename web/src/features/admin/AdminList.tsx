@@ -1,17 +1,7 @@
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  List,
-  ListItemButton,
-  ListItemText,
-  Paper,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, Button, CircularProgress, List, ListItemButton, ListItemText, Paper, Stack } from "@mui/material";
 import type { ReactNode } from "react";
+import { EmptyState } from "../../components";
 
 export interface AdminRow {
   id: string | number;
@@ -56,14 +46,7 @@ export function AdminList({ rows, isPending, error, onRetry, emptyText }: AdminL
       </Alert>
     );
 
-  if (!rows || rows.length === 0)
-    return (
-      <Paper variant="outlined">
-        <Typography sx={{ p: 3 }} color="text.secondary">
-          {emptyText}
-        </Typography>
-      </Paper>
-    );
+  if (!rows || rows.length === 0) return <EmptyState>{emptyText}</EmptyState>;
 
   return (
     <Paper variant="outlined">

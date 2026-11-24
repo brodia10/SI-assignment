@@ -1,7 +1,7 @@
 import AddIcon from "@mui/icons-material/Add";
 import { List, ListItemButton, ListItemText, Paper, Stack, Typography } from "@mui/material";
 import { Link, useNavigate } from "react-router";
-import { BigButton, MoneyText, PageHeader } from "../../components";
+import { BigButton, EmptyState, MoneyText, PageHeader } from "../../components";
 import { QueryState } from "./QueryState";
 import { useSalesOrders } from "./salesApi";
 import { formatLbs } from "./salesOrderDraft";
@@ -29,7 +29,7 @@ export function SalesOrderList() {
       <QueryState isPending={orders.isPending} error={orders.error} onRetry={() => orders.refetch()} />
       {orders.data &&
         (orders.data.length === 0 ? (
-          <Typography color="text.secondary">No sales orders yet.</Typography>
+          <EmptyState>No sales orders yet. Tap “New sales order” to ship the first one.</EmptyState>
         ) : (
           <Paper variant="outlined">
             <List disablePadding>

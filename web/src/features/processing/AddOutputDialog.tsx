@@ -15,7 +15,7 @@ import { useId, useState } from "react";
 import { BigButton, PickList, type PickOption, WeightInput } from "../../components";
 import { BIG_TOUCH_TARGET } from "../../theme";
 import type { LocationOption, ProductOption } from "./api";
-import { type DraftOutput, formatLbs } from "./workOrderDraft";
+import { type DraftOutput, formatLbs, suggestLocation } from "./workOrderDraft";
 
 /** Most identical outputs in one go. Plenty for "four slit coils"; more can be added again. */
 const MAX_COPIES = 20;
@@ -27,6 +27,8 @@ interface AddOutputDialogProps {
   remainingLbs: number;
   /** How many more outputs the work order can take. */
   room: number;
+  /** Where the last good output went, to suggest for the next one. */
+  lastGoodLocationId: number | null;
   onAdd: (entry: Omit<DraftOutput, "key">, count: number) => void;
   onClose: () => void;
 }
@@ -35,10 +37,20 @@ interface AddOutputDialogProps {
  * Add one output, or several identical ones ("4 × 9,900 lbs into Rack 4"). Mount it only while open, so it starts
  * empty every time.
  */
-export function AddOutputDialog({ products, locations, remainingLbs, room, onAdd, onClose }: AddOutputDialogProps) {
+export function AddOutputDialog({
+  products,
+  locations,
+  remainingLbs,
+  room,
+  lastGoodLocationId,
+  onAdd,
+  onClose,
+}: AddOutputDialogProps) {
   const [productId, setProductId] = useState<number | null>(null);
   const [weightLbs, setWeightLbs] = useState<number | null>(null);
   const [locationId, setLocationId] = useState<number | null>(null);
+  // Picking a product suggests its location until the purchaser picks one themselves.
+  const [locationPicked, setLocationPicked] = useState(false);
   const [count, setCount] = useState(1);
   const countLabelId = useId();
   const maxCount = Math.max(1, Math.min(MAX_COPIES, room));
@@ -58,6 +70,18 @@ export function AddOutputDialog({ products, locations, remainingLbs, room, onAdd
 
   const ready = productId !== null && weightLbs !== null && weightLbs > 0 && locationId !== null && count <= room;
 
+  function pickProduct(id: number) {
+    setProductId(id);
+    if (locationPicked) return;
+    const isScrap = products.find((p) => p.id === id)?.isScrap ?? false;
+    setLocationId(suggestLocation(isScrap, locations, lastGoodLocationId));
+  }
+
+  function pickLocation(id: number) {
+    setLocationId(id);
+    setLocationPicked(true);
+  }
+
   function add() {
     if (!ready) return;
     onAdd({ productId, weightLbs, locationId }, count);
@@ -75,14 +99,9 @@ export function AddOutputDialog({ products, locations, remainingLbs, room, onAdd
               label="What came off the line?"
               options={productOptions}
               value={productId}
-              onChange={setProductId}
+              onChange={pickProduct}
             />
-            <PickList
-              label="Where is it going?"
-              options={locationOptions}
-              value={locationId}
-              onChange={setLocationId}
-            />
+            <PickList label="Where is it going?" options={locationOptions} value={locationId} onChange={pickLocation} />
           </Stack>
           <Stack spacing={2} sx={{ alignItems: { xs: "stretch", md: "flex-start" } }}>
             <WeightInput label={count > 1 ? "Weight of each" : "Weight"} value={weightLbs} onChange={setWeightLbs} />

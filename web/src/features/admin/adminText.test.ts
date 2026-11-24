@@ -5,6 +5,7 @@ import {
   num,
   type ProductForm,
   type ProductLike,
+  pricesText,
   priceText,
   problemMessage,
   productRows,
@@ -134,5 +135,20 @@ describe("problemMessage", () => {
     );
     expect(problemMessage({ title: "Conflict" }, "f")).toBe("Conflict");
     expect(problemMessage(undefined, "Couldn't save.")).toBe("Couldn't save.");
+  });
+});
+
+describe("pricesText", () => {
+  it("leaves out a missing price instead of saying 'No price'", () => {
+    expect(pricesText(0.42, null)).toBe("Buy $0.42/lb");
+    expect(pricesText(null, 0.55)).toBe("Sell $0.55/lb");
+  });
+
+  it("shows both when both are set", () => {
+    expect(pricesText(0.42, 0.5)).toBe("Buy $0.42/lb · Sell $0.50/lb");
+  });
+
+  it("says so when neither is set", () => {
+    expect(pricesText(null, null)).toBe("No prices yet");
   });
 });
